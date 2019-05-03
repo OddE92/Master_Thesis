@@ -50,15 +50,20 @@ struct Bfield_func{
     
  /***** Insert the B-field function component-wise in x, y and z *****/
 
-    double x(double t, std::vector<double> &pos){
-        return 0;
-    }
-    double y(double t, std::vector<double> &pos){
-        return 0;
-    }
-    double z(double t, std::vector<double> &pos){
-        return 1;
-    }
+     const double theta = 11.5* M_PI / 180.0;
+     double phi;
+
+     double x(double t, std::vector<double> &pos){
+        phi = std::atan2(pos[1], pos[0]);
+        return (std::sin(theta) * std::cos(phi) - std::cos(theta) * std::sin(phi));
+     }
+     double y(double t, std::vector<double> &pos){
+        phi = std::atan2(pos[1], pos[0]);
+        return (std::sin(theta) * std::sin(phi) + std::cos(theta) * std::cos(phi));
+     }
+     double z(double t, std::vector<double> &pos){
+         return 0;
+     }
 
 };
 
@@ -85,6 +90,8 @@ class Bfield{
 
       int calculate_partial_b_hat(      std::vector<double> &B_at_point, std::vector<double> GC_velocity,
                                         std::vector<double> &GC_position, double timestep, double t);
+
+      double B_amp_current();
 
       //General functions
       int generate_turbulence_at_point(std::vector<double> &pos);

@@ -5,6 +5,7 @@
 #include "Initializer/initializer.h"
 #include "Particle/class_particle.h"
 #include "Bfield/class_bfield.h"
+#include "Guiding_center/class_guiding_center.h"
 
 #include <vector>
 
@@ -13,40 +14,24 @@ class Trajectory{
 
         std::vector<double> D_ij, D_ij_time;
         std::vector<double> r_vect;
-        std::vector<double> GC_velocity, GC_position;
-        std::vector<double> a_hat, hat_1;
-        std::vector<double> v_perp_hat;
+        
         double t, t_start, t_end, dt;
         double min_err, max_err;
         double unit_coeff;
-        double R_Larmor;
+        //double R_Larmor;
         const double mtopc = 3.24078e-17;
 
-       // GC variables
-        double gyrofrequency;
-        double gyrophase;
-        double u;
-        double v_perp, v_parallell;
-        
        // RK-solver variables
         int nvar;
-        
         VecDoub ystart;
 
        // Functions  
-        int initialize_new_GC(Particle &particle, Bfield &bfield, Ran &rng);
-
         int Propagate_particle(Bfield &bfield, Particle &particle);
         int Propagate_particle_wtf(Bfield &bfield, Particle &particle);
-        int Propagate_GC(Bfield &bfield, Particle &particle);
-        int Propagate_GC_wtf(Bfield &bfield, Particle &particle);
+        int Propagate_GC(Bfield &bfield, Particle &particle, Guiding_Center &GC);
+        int Propagate_GC_wtf(Bfield &bfield, Particle &particle, Guiding_Center &GC);
         
         int calculate_D_ij(int num_particles);
-
-        double calculate_v_parallell(const std::vector<double> &particle_velocity, const std::vector<double> &B_hat);
-        double calculate_v_perp(const std::vector<double> &particle_velocity, const double v_parallell);
-
-        int calculate_particle_velocity(Particle &particle, Bfield &bfield);
 
         int write_positions_to_file(std::ofstream &file);
 

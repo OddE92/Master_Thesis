@@ -2,6 +2,7 @@
 #include "Bfield/class_bfield.h" 
 #include "Functions/functions.h"
 #include "Particle/class_particle.h"
+#include "Guiding_center/class_guiding_center.h"
 
 #include <iostream>
 #include <time.h>
@@ -38,18 +39,19 @@ int main(void){
     Ran rng(init.seed);
     Bfield bfield(init, rng);
     Particle particle(init);
+    Guiding_Center GC(init);
     Trajectory trajectory(init);
 
 
-    trajectory.initialize_new_GC(particle, bfield, rng);
- std::cout << "GC initial velocity: " << trajectory.GC_velocity << std::endl;
+    GC.initialize_new_GC(particle, bfield, rng, init.t_start);
+ std::cout << "GC initial velocity: " << GC.GC_velocity << std::endl;
 
 
-    trajectory.Propagate_GC_wtf(bfield, particle);
+    trajectory.Propagate_GC_wtf(bfield, particle, GC);
 
 
 
-    std::cout << "R_l: " << trajectory.R_Larmor << std::endl;
+    std::cout << "R_l: " << GC.R_Larmor << std::endl;
 
     clock_t end = clock();
     double elapsed_secs = double(end - begin)/CLOCKS_PER_SEC;

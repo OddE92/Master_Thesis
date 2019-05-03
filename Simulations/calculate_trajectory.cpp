@@ -8,91 +8,103 @@
 #include <cstdlib>
 #include <ctime>
 #include <random>
-/*
-void print_Dij(vector<double> &inVector, int startMatrix){
 
-  cout << setprecision(5);
-  cout << endl;
+constexpr int N_TEST_PARTICLES      =   100;
+constexpr int N_RANDOM_MODES        =   500;
+constexpr int T_RUN_FOR_YEARS       =   1e5;
+constexpr double B_REGULAR_COMP     =   10000.0;                                         //microGauss
+constexpr double B_TURBULENT_COMP   =   4.0;                                         //microGauss
+constexpr double E_TOTAL            =   1e15;                                        //eV
+constexpr double LAMBDA_MAX         =   150.0;                                        //pc
+constexpr double LAMBDA_MIN         =   0.027;                                       //pc    (0.27 = Rl/10 for B = 4, E = e16)
+constexpr double Q_CHARGE           =   1;                                           //# electron charges
+constexpr double M_MASS             =   938.2720813;                                 //MeV/c^2
+constexpr double ERROR_MAX          =   1.0e-6;                                     
+constexpr double ERROR_MIN          =   1.0e-08;
+const int NUM_POINTS_RECORDED       =   log10(T_RUN_FOR_YEARS) * 9 + 1;
+const int D_IJ_LENGTH               =   NUM_POINTS_RECORDED * 7;
+constexpr bool GEN_TURB_GLOB        =   false;
 
-  cout << inVector[startMatrix + 0] << ' ' << inVector[startMatrix + 1] << ' ' << inVector[startMatrix + 2] << endl;
-  cout << inVector[startMatrix + 1] << ' ' << inVector[startMatrix + 3] << ' ' << inVector[startMatrix + 4] << endl;
-  cout << inVector[startMatrix + 2] << ' ' << inVector[startMatrix + 4] << ' ' << inVector[startMatrix + 5] << endl;
-
-  cout << endl;
-
-  cout << "D_ij average: " << inVector[startMatrix +6] << endl;
-  
-  cout << endl;
-
-}*/
+int initialize_init(Initializer &init, int procID);
 
 int main(void){
     clock_t begin = clock();
 
     Initializer init;
-    
-    std::srand(time(0));  //rand() +                                    //Add this line to seed for "more" randomness
-    int seed = 0; //rand() + 1000;
 
-    Ran rng(seed);
+    initialize_init(init, 1);
 
-    init.procID = 0;
-
-    std::srand(time(0));
-    init.seed = rand();                                                             //Sets the seed for the RNG. Set to 0 
-                                                                                    //to generate equal results
-
-    init.n_k = 50;                                                                 //#modes used to generate TMF
-    
-    init.t_end_y = 1e5;                                                             //Set time in years
-    init.num_points_recorded = log10(init.t_end_y) * 9 + 1;
-    init.t_start = 0.0; 
-    init.t_end = 31557600.0 * init.t_end_y; 
-    //init.t_end = 1000.0;
-    init.dt = 0.1;                                                                  //Set time start and end here, and the timestep
-
-/*
-    Set B_0 as the regular magnetic field strength, given in microgauss.
-    Set B_rms_turb as the turbulent magnetic field RMS-strength, given in microgauss.
-*/
-    init.B_0 = 1.0; init.B_rms_turb = 4.0;                              //B_0 is the regular field, B_rms_turb is the RMS of the turb field
-    init.lambda_max = 10; init.lambda_min = 0.0027;                     //set these in parsecs
-/*
-    Set initial conditions. E is the total energy given in eV.
-    x0, y0 and z0 are the initial coordinates, given in parsec.
-    vx0, vy0 and vz0 are the initial velocities, given as a percentage (must add to 1).
-    The speed in each direction is calculated on the basis of the total energy and the
-    given percentages.
-*/
-    init.E = 1.0 * 1e17;                                                
-    init.start_pos = { 0, 0, 0 };                        //Initial conditions
-    init.start_vel = { 0.9, 0, 1-0.9*0.9};
-    init.N = 1;
-/* 
-    Initialize charge Q, where Q = q*e, q being an integer and e the elementary charge
-    Mass is given in MeV/c^2
-    for(int i = 0; i < trajectory2.D_ij.size(); i+=7){
-        print_Dij(trajectory2.D_ij, i);
-    }
-*/
-    init.q = 1.0; init.m = 938.2720813;                                 //Set the charge and mass
-                                                                        
-    init.max_err = 1.0e-18;                                             //Set min and max error
-    init.min_err = 1.0e-08;
-
-    init.generate_turbulence = false;                                    //This does decide if you generate a turbulence or not
-    init.GCT = false;
+    Ran rng(init.seed);
     
     //Trajectory trajectory1(init);
     Bfield bfield(init, rng);
     Particle particle(init);
     Trajectory trajectory(init);
+    Guiding_Center GC(init);
+
 
     particle.initialize_new_particle(rng);
-    particle.v = { 0.9*c, 0, std::sqrt(1-0.9*0.9)*c};
+    particle.v = { 1/std::sqrt(3.0)*c, 1/std::sqrt(3)*c, 1/std::sqrt(3)*c};
     std::cout << "vx0: " << particle.v[0] << " vy0: " << particle.v[1] << " vz0: " << particle.v[2] << std::endl;   
 
+    GC.initialize_new_GC(particle, bfield, rng, 0.0);
+
     trajectory.Propagate_particle_wtf(bfield, particle);
+
+
+    GC.R_Larmor = 1.0810076e-15 * (GC.v_perp / c) * (particle.E / (bfield.B_0 + bfield.B_rms_turb*0)); 
+
+    std::cout << "R_l: " << GC.R_Larmor << std::endl;
+
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin)/CLOCKS_PER_SEC;
+
+    std::cout << "Program ended in " << elapsed_secs << " seconds \n";
+
+}
+
+int initialize_init(Initializer &init, int procID){
+  init.procID = procID;
+
+  std::srand(time(0));  //rand() +                                    //Add this line to seed for "more" randomness
+  init.seed = rand() + 1000 * procID;                                 //Sets the seed for the RNG. Set to const 
+                                                                      //to generate equal results
+
+  init.n_k = N_RANDOM_MODES;                                          //#modes used to generate TMF
+  init.N = N_TEST_PARTICLES;                                          //Number of test-particles
+    
+  init.t_end_y = T_RUN_FOR_YEARS;                                     //Set time in years
+  init.t_start = 0.0;                                                 //Set time start and end here, and the timestep
+  init.t_end = 31557600.0 * init.t_end_y; 
+  init.dt = 0.1;        
+
+  init.B_0 = B_REGULAR_COMP; init.B_rms_turb = B_TURBULENT_COMP;      //B_0 is the regular field, B_rms_turb is the RMS of the turb field
+
+  init.E = E_TOTAL;                                                   //Energy in eV
+
+  init.lambda_max = LAMBDA_MAX; init.lambda_min = LAMBDA_MIN;         //Wavelength in pc
+
+  init.q = Q_CHARGE; init.m = M_MASS;                                 //Set the charge and mass
+                                                                        
+  init.max_err = ERROR_MAX;                                           //Set min and max error
+  init.min_err = ERROR_MIN;
+                              
+  init.generate_turbulence = GEN_TURB_GLOB;                           //This decides if you generate a turbulence or not
+    
+  init.num_points_recorded = NUM_POINTS_RECORDED;                     //Sets length of diffusion tensor-vector  
+
+  init.start_pos = { 0, 0, 0 };                                       //Set here as default. Should be randomly chosen in the program
+  init.start_vel = { 1, 0, 0 };
+
+  init.GCT = false;
+  return 0;
+}
+
+
+
+/***********************************************************************************************/
+/***********************************************************************************************/
+
 
     //trajectory.generate_bfield(trajectory.t, trajectory.Bx, trajectory.By, trajectory.Bz);
     //trajectory.write_turbulence_to_files();
@@ -102,10 +114,8 @@ int main(void){
     //trajectory2.RK4t_step_size_control();
     //trajectory2.RK_BS_wtf(init);
 
-    trajectory.R_Larmor = 1.0810076e-15 * (particle.v[0] / c) * (particle.E / (bfield.B_0 + bfield.B_rms_turb*0)); 
 
-    std::cout << "R_l: " << trajectory.R_Larmor << std::endl;
-/*
+    /*
     for(int i = 0; i < trajectory2.D_ij.size(); i+=7){
         print_Dij(trajectory2.D_ij, i);
     }
@@ -157,9 +167,3 @@ int main(void){
 
     file4.close();
 */
-    clock_t end = clock();
-    double elapsed_secs = double(end - begin)/CLOCKS_PER_SEC;
-
-    std::cout << "Program ended in " << elapsed_secs << " seconds \n";
-
-}

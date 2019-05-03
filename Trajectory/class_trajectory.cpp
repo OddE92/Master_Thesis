@@ -36,50 +36,7 @@ int Trajectory::write_positions_to_file(std::ofstream &file){
 }
 
 
-
-int Trajectory::initialize_new_GC(Particle &particle, Bfield &bfield, Ran &rng){
- 
-  particle.initialize_new_particle(rng);
-  //testing:
-  particle.v = { 0.9*c, 0, sqrt(1-0.9*0.9)*c };
- 
-  bfield.generate_bfield_at_point(this->t, particle.pos);
- 
-  gyrofrequency = 8.987 * (particle.q / particle.m) * GCT::vector_amplitude(bfield.B);  // 8.987 is the unit coefficient for µG, e and MeV/c^2
-
-
-
- // Calculate initial GC-velocity
-  v_parallell = calculate_v_parallell(particle.v, bfield.B_hat);  
-
-
-  GC_velocity = { v_parallell*bfield.B_hat[0], v_parallell*bfield.B_hat[1], v_parallell*bfield.B_hat[2] };
-
-
-  u = GCT::vector_dot_product(GC_velocity, bfield.B_hat);
-
-
- // Calculate initial GC-position
-  v_perp = calculate_v_perp(particle.v, v_parallell);
-  R_Larmor = 1.0810076e-15 * (v_perp / c) * (particle.E / (bfield.B_0 + bfield.B_rms_turb));
- 
-  std::vector<double> v_perp_hat = { particle.v[0] - GC_velocity[0], particle.v[1] - GC_velocity[1], particle.v[2] - GC_velocity[2] };
- 
-  GCT::normalize_vector(v_perp_hat);                                                  // This is now v_perp_hat
-
-  a_hat = GCT::vector_cross_product(v_perp_hat, bfield.B_hat);
-  GCT::normalize_vector(a_hat);
-
-  GC_position = { particle.pos[0] + R_Larmor*a_hat[0], particle.pos[1] + R_Larmor*a_hat[1], particle.pos[2] + R_Larmor*a_hat[2] };
-
-
-  hat_1 = { -a_hat[0], -a_hat[1], -a_hat[2] };
-
-  return 0;
-}
-
-
-int Trajectory::Propagate_GC(Bfield &bfield, Particle &particle){
+int Trajectory::Propagate_GC(Bfield &bfield, Particle &particle, Guiding_Center &GC){
     double hmin = 0.0;                  // Needed in Odeint
     this->t = t_start;                  // Reset t before propagating the particle
 
@@ -89,12 +46,12 @@ int Trajectory::Propagate_GC(Bfield &bfield, Particle &particle){
 
     Odeint<StepperBS<GC_equation> > ode(ystart, t_start, t_end, max_err, max_err, dt, hmin, out, r);
 
-    ode.integrate_GC(*this, bfield, particle, this->t_end);
+    ode.integrate_GC(*this, GC, bfield, particle, this->t_end);
 
     return 0;
 }
 
-int Trajectory::Propagate_GC_wtf(Bfield &bfield, Particle &particle){
+int Trajectory::Propagate_GC_wtf(Bfield &bfield, Particle &particle, Guiding_Center &GC){
     double hmin = 0.0;                  // Needed in Odeint
     this->t = t_start;                  // Reset t before propagating the particle  
 
@@ -104,7 +61,7 @@ int Trajectory::Propagate_GC_wtf(Bfield &bfield, Particle &particle){
 
     Odeint<StepperBS<GC_equation> > ode(ystart, t_start, t_end, max_err, max_err, dt, hmin, out, r);
 
-    ode.integrate_GC(*this, bfield, particle, this->t_end);
+    ode.integrate_GC(*this, GC, bfield, particle, this->t_end);
 
     std::ofstream file;
 
@@ -149,7 +106,7 @@ int Trajectory::Propagate_particle_wtf(Bfield &bfield, Particle &particle){     
 
     ystart[0] = particle.pos[0]; ystart[1] = particle.pos[1]; ystart[2] = particle.pos[2];
     ystart[3] = particle.v[0]; ystart[4] = particle.v[1]; ystart[5] = particle.v[2];
-std::cout << "ystart: " << ystart[0] << ' ' << ystart[1] << ' ' << ystart[2] << '\n' << ystart[3] << ' ' << ystart[4] << ' ' << ystart[5] << std::endl;
+
     Output out(-1);
 
     Rhs_lorentz_equation r(particle);
@@ -172,16 +129,6 @@ std::cout << "ystart: " << ystart[0] << ' ' << ystart[1] << ' ' << ystart[2] << 
 
     return 0;
 }
-
-
-double Trajectory::calculate_v_parallell(const std::vector<double> &particle_velocity, const std::vector<double> &B_hat){
-  return GCT::vector_dot_product(particle_velocity, B_hat);
-}
-
-double Trajectory::calculate_v_perp(const std::vector<double> &particle_velocity, const double v_parallell){
-  return sqrt(pow(GCT::vector_amplitude(particle_velocity), 2) - pow(v_parallell, 2));
-}
-
 
 Trajectory::Trajectory(Initializer &init){
     

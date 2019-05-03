@@ -6,6 +6,7 @@
 #include "Trajectory/class_trajectory.h"
 #include "Initializer/initializer.h"
 #include "Functions/functions.h"
+#include "Guiding_center/class_guiding_center.h"
 
 struct Output
 {
@@ -122,7 +123,7 @@ struct Odeint
     void integrate();
     void integrate( std::vector<double> &D_ij, std::vector<double> &D_ij_time, std::vector<double> &r_vect, 
                     Bfield &bfield, Particle &particle, const double x_max);
-    void integrate_GC(    Trajectory &trajectory,
+    void integrate_GC(    Trajectory &trajectory, Guiding_Center &GC,
                     Bfield &bfield, Particle &particle, const double x_max);
 };
 
@@ -146,7 +147,7 @@ Odeint<Stepper>::Odeint(VecDoub_IO &ystartt, const Doub xx1, const Doub xx2,
 /******************** INTEGRATE FUNCTION ********************/
 
 template <class Stepper>
-void Odeint<Stepper>::integrate_GC(    Trajectory &trajectory,
+void Odeint<Stepper>::integrate_GC(    Trajectory &trajectory, Guiding_Center &GC,
                                         Bfield &bfield, Particle &particle, const double x_max)         //x = t for this program
 {
     int count = 0, logcount = 1;                            // Counters to track when to save D_ij
@@ -160,14 +161,14 @@ void Odeint<Stepper>::integrate_GC(    Trajectory &trajectory,
 
     std::vector<double> r(3,0), E_eff_cross_B_hat(3,0), b_hat_prev(3,0), axis(3,0), v_perp_hat(3,0);
 
-    r = trajectory.GC_position;                             // GC_position is initialized in parsec
+    r = GC.GC_position;                             // GC_position is initialized in parsec
 
     bfield.generate_bfield_at_point(0.0, r);
 
-    bfield.calculate_partial_b_hat(bfield.B, trajectory.GC_velocity, trajectory.GC_position, h, x);
+    bfield.calculate_partial_b_hat(bfield.B, GC.GC_velocity, GC.GC_position, h, x);
 
-    bfield.calculate_B_effective(trajectory.GC_velocity, trajectory.GC_position, trajectory.u);
-    bfield.calculate_E_effective(particle, trajectory.v_perp);
+    bfield.calculate_B_effective(GC.GC_velocity, GC.GC_position, GC.u);
+    bfield.calculate_E_effective(particle, GC.v_perp);
 
     E_eff_cross_B_hat = GCT::vector_cross_product(bfield.E_effective, bfield.B_hat);
 
@@ -179,9 +180,9 @@ void Odeint<Stepper>::integrate_GC(    Trajectory &trajectory,
 
 
         // GC_position is initialized to [pc], but we need [m] during the calculation
- y[0] = trajectory.GC_position[0]/mtopc; y[1] = trajectory.GC_position[1]/mtopc; y[2] = trajectory.GC_position[2]/mtopc;      // y[0-2]
- y[3] = trajectory.u;                                                                                            // y[3]
- y[4] = trajectory.gyrophase;                                                                                    // y[4]
+ y[0] = GC.GC_position[0]/mtopc; y[1] = GC.GC_position[1]/mtopc; y[2] = GC.GC_position[2]/mtopc;      // y[0-2]
+ y[3] = GC.u;                                                                                            // y[3]
+ y[4] = GC.gyrophase;                                                                                    // y[4]
  y[5] = bfield.B_effective[0]; y[6] = bfield.B_effective[1]; y[7] = bfield.B_effective[2];                       // y[5-7]
  y[8] = E_eff_cross_B_hat[0]; y[9] = E_eff_cross_B_hat[1]; y[10] = E_eff_cross_B_hat[2];                         // y[8-9]
  y[11] = B_eff_dot_E_eff;                                                                                        // y[10]
@@ -225,22 +226,22 @@ std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::e
         r = { y[0]*mtopc, y[1]*mtopc, y[2]*mtopc };
         bfield.generate_bfield_at_point(x, r);
         
-        trajectory.GC_velocity = { y[3]*bfield.B_hat[0], y[3]*bfield.B_hat[1], y[3]*bfield.B_hat[2] };
+        GC.GC_velocity = { y[3]*bfield.B_hat[0], y[3]*bfield.B_hat[1], y[3]*bfield.B_hat[2] };
 
         //calculate particle.v
         axis = GCT::calculate_vector_rotation(b_hat_prev, bfield.B_hat, theta);     // Axis now holds the normal vector for the rotation
-        GCT::rotate_vector_in_plane(trajectory.hat_1, axis, theta);                 // \hat{1} is now rotated to the new plane
-        trajectory.a_hat = trajectory.hat_1;                                        // set phase to zero
+        GCT::rotate_vector_in_plane(GC.hat_1, axis, theta);                 // \hat{1} is now rotated to the new plane
+        GC.a_hat = GC.hat_1;                                        // set phase to zero
     //std::cout << "hat_1: " << trajectory.hat_1;
-        GCT::rotate_vector_in_plane(trajectory.a_hat, bfield.B_hat, y[4]);          // rotate by the gyrophase
+        GCT::rotate_vector_in_plane(GC.a_hat, bfield.B_hat, y[4]);          // rotate by the gyrophase
     //std::cout << "a_hat: " << trajectory.a_hat << std::endl;
-        v_perp_hat = GCT::vector_cross_product(trajectory.a_hat, bfield.B_hat);
+        GC.v_perp_hat = GCT::vector_cross_product(GC.a_hat, bfield.B_hat);
     //std::cout << "v_perp_hat: " << v_perp_hat << std::endl;
-        GCT::normalize_vector(v_perp_hat);
+        GCT::normalize_vector(GC.v_perp_hat);
         particle.v = {                                                              // Add velocity in perp and parallell directions
-            trajectory.v_perp*v_perp_hat[0] + trajectory.v_parallell*bfield.B_hat[0],
-            trajectory.v_perp*v_perp_hat[1] + trajectory.v_parallell*bfield.B_hat[1],
-            trajectory.v_perp*v_perp_hat[2] + trajectory.v_parallell*bfield.B_hat[2],
+            GC.v_perp*GC.v_perp_hat[0] + GC.v_parallell*bfield.B_hat[0],
+            GC.v_perp*GC.v_perp_hat[1] + GC.v_parallell*bfield.B_hat[1],
+            GC.v_perp*GC.v_perp_hat[2] + GC.v_parallell*bfield.B_hat[2],
         };
 /*
         std::cout << "GC_pos: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::endl;
@@ -248,11 +249,11 @@ std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::e
         std::cout << "gyrophase: " << y[4] << std::endl;
         std::cout << "u: " << y[3] << std::endl << std::endl;
 */
-        bfield.calculate_partial_b_hat(bfield.B, trajectory.GC_velocity, trajectory.GC_position, h, x);
+        bfield.calculate_partial_b_hat(bfield.B, GC.GC_velocity, GC.GC_position, h, x);
 
-        bfield.calculate_B_effective(trajectory.GC_velocity, r, y[3]);
+        bfield.calculate_B_effective(GC.GC_velocity, r, y[3]);
 
-        bfield.calculate_E_effective(particle, trajectory.v_perp);                              // Assume v_perp = const
+        bfield.calculate_E_effective(particle, GC.v_perp);                              // Assume v_perp = const
 
         E_eff_cross_B_hat = GCT::vector_cross_product(bfield.E_effective, bfield.B_hat);
 
@@ -385,7 +386,7 @@ void Odeint<Stepper>::integrate(    std::vector<double> &D_ij, std::vector<doubl
         bfield.generate_bfield_at_point(x, B, r);
         y[6] = B[0]; y[7] = B[1]; y[8] = B[2];
 
-
+        std::cout << "Bfield: " << B << std::endl;
 
         double t = x+h;
         if( t/31557600 - (logcount * pow(10, count)) > __DBL_EPSILON__){

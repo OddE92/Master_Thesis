@@ -8,7 +8,7 @@ int Bfield::generate_bfield_at_point(double t, std::vector<double> &B_out, std::
 
 /* 
     This functions takes the position and time, generates the turbulence (without reinitializing it) 
-    and calculates the regular field at the position and time. B_0 is used to scale the regular field.
+    and calculates the regular field at the position and time. B_0 can be used to scale the regular field.
 */
     
     if(!turbulence_is_initialized && gen_turb){ 
@@ -19,9 +19,9 @@ int Bfield::generate_bfield_at_point(double t, std::vector<double> &B_out, std::
         generate_turbulence_at_point(pos);
     }
 
-    B_out[0] = B_0 * B_static.x(t, pos) + turbAtPoint[0];
-    B_out[1] = B_0 * B_static.y(t, pos) + turbAtPoint[1];
-    B_out[2] = B_0 * B_static.z(t, pos) + turbAtPoint[2];
+    B_out[0] = B_static.x(t, pos) + turbAtPoint[0];
+    B_out[1] = B_static.y(t, pos) + turbAtPoint[1];
+    B_out[2] = B_static.z(t, pos) + turbAtPoint[2];
 
     return 0;
 }
@@ -31,7 +31,7 @@ int Bfield::generate_bfield_at_point(double t, std::vector<double> &pos){
 
 /* 
     This functions takes the position and time, generates the turbulence (without reinitializing it) 
-    and calculates the regular field at the position and time. B_0 is used to scale the regular field.
+    and calculates the regular field at the position and time. B_0 can be used to scale the regular field.
 */
     
     if(!turbulence_is_initialized && gen_turb){ 
@@ -222,6 +222,13 @@ int Bfield::calculate_E_effective(Particle &particle, double v_perp){
 }
 
 /** END CALC EFFECTIVE FIELDS  **/
+
+
+
+double Bfield::B_amp_current(){                          // Assumes B has been updated.
+    return GCT::vector_amplitude(B);
+}
+
 
 
 /********** INITIALIZE **********/
