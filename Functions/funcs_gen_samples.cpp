@@ -33,7 +33,7 @@ int Calculate_eigenvalues(Eigenvectors &eigen){
       for(int i = 0; i < eigen.all_Da_ij[instance].size() - 1; i += 7){
 
         //print_Dij(D_ij[instance], i);
-        calculate_eigenvalues_3x3_sym(eigen.all_Da_ij[instance], i, eigen.current_values);
+        GCT::calculate_eigenvalues_3x3_sym(eigen.all_Da_ij[instance], i, eigen.current_values);
 
         
         eigen.values_by_instace_and_time[instance][i/7] = eigen.current_values; 
@@ -78,7 +78,7 @@ int write_diffusion_coefficients_to_file(Eigenvectors &eigen, std::string filena
     
     std::ofstream file;
 
-    create_directory_to_file(filename);
+    GCT::create_directory_to_file(filename);
 
     file.open(filename);
 

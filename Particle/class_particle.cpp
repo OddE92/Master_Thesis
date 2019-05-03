@@ -8,7 +8,7 @@ int Particle::initialize_new_particle(Ran &rng){
 
     double ranPhi = 2 * M_PI * rng.doub();
     double ranTheta = acos(1.0 - 2 * rng.doub());
-
+    
     v[0] = cos(ranPhi) * sin(ranTheta) * v_total;
     v[1] = sin(ranPhi) * sin(ranTheta) * v_total;
     v[2] = cos(ranTheta) * v_total;

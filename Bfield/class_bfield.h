@@ -41,6 +41,7 @@
 #include <complex>
 #include <cmath>
 
+#include "Particle/class_particle.h"
 
 #include "NR3/ran.h"
 #include "Initializer/initializer.h"
@@ -56,19 +57,9 @@ struct Bfield_func{
         return 0;
     }
     double z(double t, std::vector<double> &pos){
-        return 0;
+        return 1;
     }
 
- /***** Insert the differentiated B-field function in x_, y_ and z_diff *****/
-    double x_diff(double t, std::vector<double> &pos){
-        return 0;
-    }
-    double y_diff(double t, std::vector<double> &pos){
-        return 0;
-    }
-    double z_diff(double t, std::vector<double> &pos){
-        return 0;
-    }
 };
 
 
@@ -76,66 +67,77 @@ struct Bfield_func{
 /********* CLASS BFIELD *********/
 
 class Bfield{
-  public:
-    std::vector<double> turbAtPoint, B;
+   public:
+      //std::array<double, 3> turbAtPoint, B, B_effective, E_effective;
+      std::vector<double> turbAtPoint, B, B_hat;
+      std::vector<double> B_effective, E_effective;
+      std::vector<std::vector<double> > B_hat_partial;
 
-    Bfield_func B_static;
-    Ran ran;
+      bool gen_turb = true;
 
-    bool gen_turb = true;
+      //Functions for generating the B-field
+      int generate_bfield_at_point(double t, std::vector<double> &B_out, std::vector<double> &pos);
+      int generate_bfield_at_point(double t, std::vector<double> &pos);
 
-    //Functions for generating the B-field
-    int generate_bfield_at_point(double t, std::vector<double> &B_out, std::vector<double> &pos);
+      int calculate_B_effective(std::vector<double> &GC_velocity, std::vector<double> &pos, double u);
 
-    //General functions
-    int generate_turbulence_at_point(std::vector<double> &pos);
-    int initialize_turbulence();
-    int reinitialize_turbulence();
+      int calculate_E_effective(Particle &particle, double v_perp);
 
-    //Constructors and destructor
-    Bfield();
-    Bfield(Initializer &init);
-    ~Bfield();
+      int calculate_partial_b_hat(      std::vector<double> &B_at_point, std::vector<double> GC_velocity,
+                                        std::vector<double> &GC_position, double timestep, double t);
+
+      //General functions
+      int generate_turbulence_at_point(std::vector<double> &pos);
+      int initialize_turbulence(Ran &ran);
+      int reinitialize_turbulence(Ran &ran);
+
+      //Constructors and destructor
+      Bfield();
+      Bfield(Initializer &init, Ran &ran);
+      ~Bfield();
 
  /********** CONSTANTS **********/
 
-    //pi = M_PI
-    const double two_pi = 2 * M_PI;
+      //pi = M_PI
+      const double two_pi = 2 * M_PI;
 
-    std::complex<double> im; //For working with complex numbers
+      std::complex<double> im; //For working with complex numbers
 
-    //Magnetic field
-    int n_k = 50; //Nr. of modes used to generate the turbulence
-    double B_0 = 1.0;
-    double B_rms_turb = 1.0;            //Normalized magnetic field,
-    const double gamma = 5.0 / 3.0;     //Power law for the fluctuation spectrum
-    double lambda_min = 0.2;            //Smallest wavelength, in parsecs
-    double lambda_max = 10.0;           //Largest wavelength, in parsecs
-    double k_min = two_pi / lambda_max; //Smallest wavenumber
-    double k_max = two_pi / lambda_min; //Largest wavenumber
+      //Magnetic field
+      int n_k = 50; //Nr. of modes used to generate the turbulence
+      double B_0 = 1.0;
+      double B_rms_turb = 1.0;            //Normalized magnetic field,
+      const double gamma = 5.0 / 3.0;     //Power law for the fluctuation spectrum
+      double lambda_min = 0.2;            //Smallest wavelength, in parsecs
+      double lambda_max = 10.0;           //Largest wavelength, in parsecs
+      double k_min = two_pi / lambda_max; //Smallest wavenumber
+      double k_max = two_pi / lambda_min; //Largest wavenumber
 
  /********* END CONSTANTS ********/
 
-  private:
-    //functions to initialize the turbulence. Only run these once!
-    void initialize_phases();
-    void initialize_phases_from_file();
-    void initialize_normalization();
+   private:
 
-    //Bools to check if functions need to be run or not.
-    bool turbulence_is_initialized = false;
+      Bfield_func B_static;
+
+      //functions to initialize the turbulence. Only run these once!
+      void initialize_phases(Ran &ran);
+      void initialize_phases_from_file();
+      void initialize_normalization();
+
+      //Bools to check if functions need to be run or not.
+      bool turbulence_is_initialized = false;
 
  /********* RANDOM PHASES ********/
 
-    std::vector<double> a, b, p, t, s;          //a = alpha, b = beta, p = phi, t = theta, s = sign
-    std::vector<double> ca, sa, cp, sp, ct, st; //c = cos, s = sin; ca = cos(a(n_k));
+      std::vector<double> a, b, p, t, s;          //a = alpha, b = beta, p = phi, t = theta, s = sign
+      std::vector<double> ca, sa, cp, sp, ct, st; //c = cos, s = sin; ca = cos(a(n_k));
 
  /******* END RANDOM PHASES ******/
 
  /***** NORMALIZED PARAMETERS ****/
 
-    std::vector<double> B_k, k;
-    double dB_min;
+      std::vector<double> B_k, k;
+      double dB_min;
 
  /*** END NORMALIZED PARAMETERS **/
 };

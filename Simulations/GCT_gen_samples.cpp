@@ -15,7 +15,7 @@
 constexpr int N_TEST_PARTICLES      =   100;
 constexpr int N_RANDOM_MODES        =   500;
 constexpr int T_RUN_FOR_YEARS       =   1e5;
-constexpr double B_REGULAR_COMP     =   0.0;                                         //microGauss
+constexpr double B_REGULAR_COMP     =   1.0;                                         //microGauss
 constexpr double B_TURBULENT_COMP   =   4.0;                                         //microGauss
 constexpr double E_TOTAL            =   1e18;                                        //eV
 constexpr double LAMBDA_MAX         =   150.0;                                        //pc
@@ -26,7 +26,7 @@ constexpr double ERROR_MAX          =   1.0e-05;
 constexpr double ERROR_MIN          =   1.0e-08;
 const int NUM_POINTS_RECORDED       =   log10(T_RUN_FOR_YEARS) * 9 + 1;
 const int D_IJ_LENGTH               =   NUM_POINTS_RECORDED * 7;
-constexpr bool GEN_TURB_GLOB        =   true;
+constexpr bool GEN_TURB_GLOB        =   false;
 
 
 int initialize_init(Initializer &init, int procID);
@@ -96,12 +96,12 @@ int main(int argc, char* argv[])
 
     initialize_init(init, procID);
 
-    Ran rng(15321 + 100*procID + init.seed);                            //To generate directions
+    Ran rng(15321 + 100*procID + init.seed);                            // To generate directions
     Bfield bfield(init, rng);
     Particle particle(init);
     Trajectory trajectory(init);
     
-    std::ofstream file;                                                 //To hold position of particles
+    std::ofstream file;                                                 // To hold position of particles
     std::string filename = GCT::generate_unique_filename_positions(bfield, particle, procID);
     GCT::create_directory_to_file(filename);
     file.open(filename);
@@ -112,23 +112,23 @@ int main(int argc, char* argv[])
     }
       
 
-    for(int i = 0; i < init.N; i++){                                    //i < number of particles to test
+    for(int i = 0; i < init.N; i++){                                    // i < number of particles to test
 
 
-      particle.initialize_new_particle(rng);
+      trajectory.initialize_new_GC(particle, bfield, rng);
   
 
-      trajectory.Propagate_particle(bfield, particle);
+      trajectory.Propagate_GC(bfield, particle);
 
 
-      //Print progress in %
+     //Print progress in %
       if( static_cast<double>(i+1)/init.N - percentCounter > __DBL_EPSILON__ ){
         std::cout << "Progress rank " << procID << ": " << (static_cast<double>(i+1)/init.N) * 100 << "\% \n";
         percentCounter += 0.1;
       }
 
 
-      trajectory.write_positions_to_file(file);
+      trajectory.write_positions_to_file(file);                         // Write recorded positions of particle i
 
      //After this loop, D_ij holds the sum in the equation for D_ij
     }//End for particle i
@@ -185,6 +185,7 @@ int initialize_init(Initializer &init, int procID){
   init.start_pos = { 0, 0, 0 };                                       //Set here as default. Should be randomly chosen in the program
   init.start_vel = { 1, 0, 0 };
 
+  init.GCT = true;
   return 0;
 }
 

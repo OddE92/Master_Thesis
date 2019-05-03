@@ -1,6 +1,9 @@
 #include "Bfield/class_bfield.h"
 
+#include "Functions/functions.h"
+
 /********** GENERATE FIELD AT POINT **********/
+
 int Bfield::generate_bfield_at_point(double t, std::vector<double> &B_out, std::vector<double> &pos){
 
 /* 
@@ -8,8 +11,9 @@ int Bfield::generate_bfield_at_point(double t, std::vector<double> &B_out, std::
     and calculates the regular field at the position and time. B_0 is used to scale the regular field.
 */
     
-    if(!turbulence_is_initialized){ 
-        initialize_turbulence();
+    if(!turbulence_is_initialized && gen_turb){ 
+        std::cout << "Turbulence not initialized";
+        throw("Turbulence not initialized");
     }
     if(gen_turb) {
         generate_turbulence_at_point(pos);
@@ -18,6 +22,33 @@ int Bfield::generate_bfield_at_point(double t, std::vector<double> &B_out, std::
     B_out[0] = B_0 * B_static.x(t, pos) + turbAtPoint[0];
     B_out[1] = B_0 * B_static.y(t, pos) + turbAtPoint[1];
     B_out[2] = B_0 * B_static.z(t, pos) + turbAtPoint[2];
+
+    return 0;
+}
+
+// overload to set bfield.B instead of a passed vector
+int Bfield::generate_bfield_at_point(double t, std::vector<double> &pos){
+
+/* 
+    This functions takes the position and time, generates the turbulence (without reinitializing it) 
+    and calculates the regular field at the position and time. B_0 is used to scale the regular field.
+*/
+    
+    if(!turbulence_is_initialized && gen_turb){ 
+        std::cout << "Turbulence not initialized";
+        throw("Turbulence not initialized");
+    }
+    if(gen_turb) {
+        generate_turbulence_at_point(pos);
+    }
+
+    B[0] = B_0 * B_static.x(t, pos) + turbAtPoint[0];
+    B[1] = B_0 * B_static.y(t, pos) + turbAtPoint[1];
+    B[2] = B_0 * B_static.z(t, pos) + turbAtPoint[2];
+
+    double B_amp = GCT::vector_amplitude(B);
+
+    B_hat = { B[0]/B_amp, B[1]/B_amp, B[2]/B_amp };
 
     return 0;
 }
@@ -93,12 +124,111 @@ int Bfield::generate_turbulence_at_point(std::vector<double> &pos){
 
 /**** END GENERATE TURBULENCE ***/
 
+/* CALCULATE PARTIAL DERIVATIVE */
+int Bfield::calculate_partial_b_hat(    std::vector<double> &B_at_point, std::vector<double> GC_velocity, 
+                                        std::vector<double> &GC_position, double timestep, double t){
+
+    B_hat_partial.resize(3, std::vector<double>(3, 0));             // [0][i] = d/di B_x, [1][i] = d/di B_y, [2][i] = d/di B_z
+    
+    std::vector<double> GC_next_position(3,0);                      // Holds GC_position after taking a step in x, y or z-direction
+    std::vector<double> B_at_next_point(3,0);
+
+ // i loops through dx, dy and dz
+    for(int i = 0; i < GC_next_position.size(); i++){               // Step through x, y, z as [0], [1], [2].
+
+        for (int j = 0; j < GC_next_position.size(); j++){          // Calculate the next position after a step in [i]-direction
+
+            if(i == j)
+                GC_next_position[j] = GC_position[j] + 1/100;       // 1/100th of a parsec <<<<< Change to something more proper?
+            else
+                GC_next_position[j] = GC_position[j];
+        
+        }
+    
+    
+        generate_bfield_at_point(t, B_at_next_point, GC_next_position);
+   
+        double B_norm_p  = GCT::vector_amplitude(B_at_point);
+        double B_norm_np = GCT::vector_amplitude(B_at_next_point);
+    /* 
+     if(i == 0){     
+        std::cout << "B_at_next_point: " << B_at_next_point << std::endl;
+        std::cout << "B_at_point: " << B_at_point << std::endl;
+        std::cout << "B_norm_p: " << B_norm_p << ", B_norm_np: " << B_norm_np << std::endl;
+     }*/
+
+     // Calculate d/di(b_hat) = b_hat(r+dr) - b_hat(r) / (2*dr), with dr = dx, dy, dz for [0], [1], [2]. 
+        for(int j = 0; j < B_at_next_point.size(); j++){
+            B_hat_partial[i][j] = (B_at_next_point[j]/B_norm_np - B_at_point[j]/B_norm_p) / (1.0/100.0);
+             
+        } 
+     //std::cout << "d" << i << " B: " << B_hat_partial[i] << std::endl;
+    }
+    
+    return 0;
+}
+
+/* END CALC PARTIAL DERIVATIVE  */
+
+/** CALCULATE EFFECTIVE FIELDS **/
+
+int Bfield::calculate_B_effective(std::vector<double> &GC_velocity, std::vector<double> &pos, double u){
+    
+    double B_amp = GCT::vector_amplitude(B);
+    
+    std::vector<double> B_hat = { B[0]/B_amp, B[1]/B_amp, B[2]/B_amp };
+    std::vector<double> nabla_u(3, 0);
+ 
+    for(int i = 0; i < nabla_u.size(); i++){
+        nabla_u[i] = GCT::vector_dot_product(GC_velocity, B_hat_partial[i]);
+    }
+ 
+    std::vector<double> nabla_u_cross_b_hat = GCT::vector_cross_product(nabla_u, B_hat);
+ 
+    std::vector<double> nabla_cross_b_hat = {
+        B_hat_partial[1][2] - B_hat_partial[2][1],
+        B_hat_partial[2][0] - B_hat_partial[0][2],
+        B_hat_partial[0][1] - B_hat_partial[1][0]
+    };
+ 
+    double me = 1.1658e-11;                 //unit coefficient of m/e in the equation for B_effective
+
+    B_effective = {
+        B[0] + me*c*(u*nabla_cross_b_hat[0] + nabla_u_cross_b_hat[0]),
+        B[1] + me*c*(u*nabla_cross_b_hat[0] + nabla_u_cross_b_hat[1]),
+        B[2] + me*c*(u*nabla_cross_b_hat[0] + nabla_u_cross_b_hat[2])
+    };
+
+    return 0;
+}
+
+int Bfield::calculate_E_effective(Particle &particle, double v_perp){
+    
+    std::vector<double> nabla_v_perp = {
+        - GCT::vector_dot_product(particle.v, B_hat_partial[0]),
+        - GCT::vector_dot_product(particle.v, B_hat_partial[1]),
+        - GCT::vector_dot_product(particle.v, B_hat_partial[2])
+    };
+
+    double me = 1.1658e-11;                 //unit coefficient of m/e in the equation for E_effective
+
+    E_effective = {
+        - me * (particle.m / particle.q) * v_perp * nabla_v_perp[0],
+        - me * (particle.m / particle.q) * v_perp * nabla_v_perp[1],
+        - me * (particle.m / particle.q) * v_perp * nabla_v_perp[2]
+    };
+
+    return 0;
+}
+
+/** END CALC EFFECTIVE FIELDS  **/
+
 
 /********** INITIALIZE **********/
 
-int Bfield::initialize_turbulence(){
+int Bfield::initialize_turbulence(Ran &ran){
     if (!turbulence_is_initialized){
-        initialize_phases();
+        initialize_phases(ran);
         //initialize_phases_from_file();                  //For generating same result when testing
         initialize_normalization();
 
@@ -109,9 +239,9 @@ int Bfield::initialize_turbulence(){
     return 1;
 }
 
-int Bfield::reinitialize_turbulence(){
+int Bfield::reinitialize_turbulence(Ran &ran){
 
-    initialize_phases();
+    initialize_phases(ran);
     initialize_normalization();
 
     turbulence_is_initialized = true;
@@ -123,7 +253,7 @@ int Bfield::reinitialize_turbulence(){
 /********************************/
 /****** INITIALIZE PHASES *******/
 
-void Bfield::initialize_phases(){
+void Bfield::initialize_phases(Ran &ran){
     double r;
 
     for(int i = 0; i < n_k; i++){                           // From the article:
@@ -224,13 +354,16 @@ void Bfield::initialize_normalization(){
 /********************************/
 
 
-Bfield::Bfield() : ran(15321){
+Bfield::Bfield(){
     
     // See class declaration for std::vector descriptions.
 
     std::cout << "Default constructor called. \n\n";
 
     turbAtPoint.resize(3);
+    B.resize(3);
+    B_effective.resize(3);
+    E_effective.resize(3);
 
     im.imag(1.0); im.real(0.0);
 
@@ -243,21 +376,24 @@ Bfield::Bfield() : ran(15321){
 
 
 
-Bfield::Bfield( Initializer &init) : B_0(init.B_0), B_rms_turb(init.B_rms_turb), ran(15321 + init.seed){
+Bfield::Bfield( Initializer &init, Ran &ran) : B_0(init.B_0), B_rms_turb(init.B_rms_turb){
     
     // See class declaration for std::vector descriptions.
     n_k = init.n_k;
   
     turbAtPoint.resize(3);
     B.resize(3);
+    B_effective.resize(3);
+    E_effective.resize(3);
+    B_hat_partial.resize(3, std::vector<double>(3,0));
 
     gen_turb = init.generate_turbulence;
 
     lambda_max = init.lambda_max;
     lambda_min = init.lambda_min;
 
-    k_min = two_pi / lambda_max;                     //Smallest wavenumber
-    k_max = two_pi / lambda_min;                     //Largest wavenumber
+    k_min = two_pi / lambda_max;                    // Smallest wavenumber
+    k_max = two_pi / lambda_min;                    // Largest wavenumber
 
     im.imag(1.0); im.real(0.0);
 
@@ -266,8 +402,12 @@ Bfield::Bfield( Initializer &init) : B_0(init.B_0), B_rms_turb(init.B_rms_turb),
     st.resize(n_k);                                                                         
 
     B_k.resize(n_k); k.resize(n_k);
-    initialize_turbulence();
 
+    if(gen_turb){
+        initialize_turbulence(ran);
+    } else{
+        B_rms_turb = 0.0;                           // Set to 0 for proper R_larmor-calculations
+    }
 }
 
 Bfield::~Bfield(){

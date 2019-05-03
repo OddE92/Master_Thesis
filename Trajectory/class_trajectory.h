@@ -13,21 +13,40 @@ class Trajectory{
 
         std::vector<double> D_ij, D_ij_time;
         std::vector<double> r_vect;
+        std::vector<double> GC_velocity, GC_position;
+        std::vector<double> a_hat, hat_1;
+        std::vector<double> v_perp_hat;
         double t, t_start, t_end, dt;
         double min_err, max_err;
         double unit_coeff;
         double R_Larmor;
         const double mtopc = 3.24078e-17;
 
+       // GC variables
+        double gyrofrequency;
+        double gyrophase;
+        double u;
+        double v_perp, v_parallell;
+        
        // RK-solver variables
-        const int nvar = 9;
+        int nvar;
+        
         VecDoub ystart;
 
        // Functions  
+        int initialize_new_GC(Particle &particle, Bfield &bfield, Ran &rng);
+
         int Propagate_particle(Bfield &bfield, Particle &particle);
         int Propagate_particle_wtf(Bfield &bfield, Particle &particle);
+        int Propagate_GC(Bfield &bfield, Particle &particle);
+        int Propagate_GC_wtf(Bfield &bfield, Particle &particle);
         
         int calculate_D_ij(int num_particles);
+
+        double calculate_v_parallell(const std::vector<double> &particle_velocity, const std::vector<double> &B_hat);
+        double calculate_v_perp(const std::vector<double> &particle_velocity, const double v_parallell);
+
+        int calculate_particle_velocity(Particle &particle, Bfield &bfield);
 
         int write_positions_to_file(std::ofstream &file);
 
@@ -44,7 +63,7 @@ struct Rhs_lorentz_equation{
     double unit_coeff;
 
     Rhs_lorentz_equation(Particle &particle){ 
-        unit_coeff = 8.987 * particle.q / (particle.gamma_l * particle.m);                 //Coefficient for the units when dv/dt = unit_coeff * V x B
+        unit_coeff = 8.987 * particle.q / (particle.gamma_l * particle.m);      //Coefficient for the units when dv/dt = unit_coeff * V x B
     }
 
     /*
@@ -70,31 +89,39 @@ struct Rhs_lorentz_equation{
     } 
 
 };
-/*
-struct gc_equation{
 
-    gc_equation(Trajectory_initializer &init){}
+struct GC_equation{
 
+    double q, m;
+    double qm_coeff = 1/1.1658e-11;
+
+    GC_equation(Particle &p){
+        q = p.q; m = p.m;
+    }
+ /*
+    y[0-2]  =   GC_position
+    y[3]    =   u
+    y[4]    =   gyrophase
+    y[5-7]  =   B_effective
+    y[8-10] =   E_eff_cross_B_hat
+    y[11]   =   B_eff_dot_E_eff
+    y[12]   =   B_eff_parallell
+    y[13]   =   B_eff_amplitude
+ */
     void operator() (const Doub t, VecDoub_I &y, VecDoub_O &dydx){
 
-        double B_par = sqrt(y[6]*y[6] + y[7]*y[7] + y[8]*y[8]);
+        for(int i = 0; i < 3; i++) dydx[i] = (y[3]/y[12])*y[i+5] + (c/y[12])*y[i+8];            // dydx[0-2] = GC_v[0-2]
 
-        dydx[0] = y[3];                         // dydx[0] = vx
-        dydx[1] = y[4];                         // dydx[1] = vy
-        dydx[2] = y[5];                         // dydx[2] = vz
+        dydx[3] = (q / m) * (1 / y[12]) * y[10];                                                // dydx[3] = d/dt u
 
-        dydx[3] = u * y[6] / B_par;             // dX/dx = u * B_x / B_par
-        dydx[4] = u * y[7] / B_par;             // dX/dy = u * B_y / B_par
-        dydx[5] = u * y[8] / B_par;             // dX/dz = u * B_z / B_par
+        dydx[4] = (q / (m*c)) * y[13];                                                          // dydx[4] = d/dt gyrophase
 
-        dydx[6] = 0;                            // 6, 7 and 8 are to keep the B-field
-        dydx[7] = 0;                            // it is updated at each step in Odeint::integrate();
-        dydx[8] = 0;
+        for(int i = 5; i<y.size();i++) dydx[i] = 0;                                             // Rest are set in integrate_GC()
     }
 
 };
-*/
 
 
 
-#endif
+
+#endif  

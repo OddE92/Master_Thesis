@@ -5,6 +5,7 @@
 
 /******* INITIALIZING LIST ******/
 struct Initializer{
+    bool GCT;
 
    // Trajectory
     double t_start, t_end, dt;
