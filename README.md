@@ -3,6 +3,7 @@ Simulations of protons in a galactic magnetic field, using Hamiltonian guiding c
 
 # Requirements
 boost openMPI
+
 Armadillo -> (BLAS, LAPACK)
 
 
