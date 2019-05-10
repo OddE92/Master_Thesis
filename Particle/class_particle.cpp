@@ -4,7 +4,8 @@
 
 int Particle::initialize_new_particle(Ran &rng){
     
-    pos = {0, 0, 0};
+    // Avoid using 0 due to singularity in some bfields at r = 0
+    pos = {1*GCT::mtopc, 1*GCT::mtopc, 1*GCT::mtopc};
 
     double ranPhi = 2 * M_PI * rng.doub();
     double ranTheta = acos(1.0 - 2 * rng.doub());
@@ -18,14 +19,12 @@ int Particle::initialize_new_particle(Ran &rng){
 
 Particle::Particle(Initializer &init){
 
-    pos.resize(3); v.resize(3);
-
     E = init.E;                             // [E] = [eV]
     q = init.q;                             // q = Z when Q = Z * e, [q] = [e]
     m = init.m;                             // [m] = [MeV/c^2]
     gamma_l = E/(1.0e6 * m);                // Lorentz factor calculated from E = gamma_l * m * c^2, with [m] = [MeV/c^2]
 
-    v_total = c * std::sqrt(1 - (1 / std::pow(gamma_l, 2)));
+    v_total = GCT::c * std::sqrt(1 - (1 / std::pow(gamma_l, 2)));
 }
 
 Particle::Particle(){
@@ -33,8 +32,6 @@ Particle::Particle(){
     // Default is a proton with E = 10^17eV
 
     std::cout << "Particle: Default constructor called. \n\n";
-
-    pos.resize(3); v.resize(3);
     
     E = 1.0e17;
     q = 1;                                  // Proton charge
@@ -42,6 +39,6 @@ Particle::Particle(){
     gamma_l = E/(1.0e6 * m);                // Lorentz factor calculated from E = gamma_l * m * c^2, with [m] = [MeV/c^2]
     
     //Find total initial velocity
-    v_total = c * std::sqrt(1 - (1 / std::pow(gamma_l, 2)));
+    v_total = GCT::c * std::sqrt(1 - (1 / std::pow(gamma_l, 2)));
 
 }

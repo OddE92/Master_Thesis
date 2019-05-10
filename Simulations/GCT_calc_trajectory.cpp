@@ -13,15 +13,15 @@
 
 constexpr int N_TEST_PARTICLES      =   100;
 constexpr int N_RANDOM_MODES        =   500;
-constexpr int T_RUN_FOR_YEARS       =   1e5;
-constexpr double B_REGULAR_COMP     =   1.0;                                         //microGauss
+constexpr int T_RUN_FOR_YEARS       =   1e4;
+constexpr double B_REGULAR_COMP     =   10.0;                                         //microGauss
 constexpr double B_TURBULENT_COMP   =   4.0;                                         //microGauss
-constexpr double E_TOTAL            =   1e17;                                        //eV
+constexpr double E_TOTAL            =   1e16;                                        //eV
 constexpr double LAMBDA_MAX         =   150.0;                                        //pc
 constexpr double LAMBDA_MIN         =   0.027;                                       //pc    (0.27 = Rl/10 for B = 4, E = e16)
 constexpr double Q_CHARGE           =   1;                                           //# electron charges
 constexpr double M_MASS             =   938.2720813;                                 //MeV/c^2
-constexpr double ERROR_MAX          =   1.0e-05;                                     
+constexpr double ERROR_MAX          =   1.0e-06;                                     
 constexpr double ERROR_MIN          =   1.0e-08;
 const int NUM_POINTS_RECORDED       =   log10(T_RUN_FOR_YEARS) * 9 + 1;
 const int D_IJ_LENGTH               =   NUM_POINTS_RECORDED * 7;
@@ -42,14 +42,11 @@ int main(void){
     Guiding_Center GC(init);
     Trajectory trajectory(init);
 
-
     GC.initialize_new_GC(particle, bfield, rng, init.t_start);
- std::cout << "GC initial velocity: " << GC.GC_velocity << std::endl;
+    std::cout << "GC initial velocity: " << GC.GC_velocity << std::endl;
 
 
-    trajectory.Propagate_GC_wtf(bfield, particle, GC);
-
-
+    trajectory.Propagate_GC_wtf(bfield, particle, GC, init, rng);
 
     std::cout << "R_l: " << GC.R_Larmor << std::endl;
 

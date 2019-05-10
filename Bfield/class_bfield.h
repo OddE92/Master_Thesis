@@ -22,13 +22,7 @@
  *      February 1999
 
  * Which has a different rotation and translation direction than the 1994 article.
-
- * The output of the program are two files. The first three numbers are the spatial coordinates x, y and z.
- * The last three numbers are Bx, By and Bz respectively.
- * *** The part where a box volume with a magnetic field has been deprecated. Now the field is generated at the provided point instead.
  
- * The second file is scaled for improved readability when plotted.
-
 **********************************************/
 
 #ifndef CLASS_BFIELD
@@ -45,6 +39,7 @@
 
 #include "NR3/ran.h"
 #include "Initializer/initializer.h"
+#include "Constants/constants.h"
 
 struct Bfield_func{
     
@@ -53,15 +48,17 @@ struct Bfield_func{
      const double theta = 11.5* M_PI / 180.0;
      double phi;
 
-     double x(double t, std::vector<double> &pos){
+     double x(double t, std::array<double, 3> &pos){
         phi = std::atan2(pos[1], pos[0]);
         return (std::sin(theta) * std::cos(phi) - std::cos(theta) * std::sin(phi));
+        //return 0;
      }
-     double y(double t, std::vector<double> &pos){
+     double y(double t, std::array<double, 3> &pos){
         phi = std::atan2(pos[1], pos[0]);
         return (std::sin(theta) * std::sin(phi) + std::cos(theta) * std::cos(phi));
+        //return 0;
      }
-     double z(double t, std::vector<double> &pos){
+     double z(double t, std::array<double, 3> &pos){
          return 0;
      }
 
@@ -74,27 +71,26 @@ struct Bfield_func{
 class Bfield{
    public:
       //std::array<double, 3> turbAtPoint, B, B_effective, E_effective;
-      std::vector<double> turbAtPoint, B, B_hat;
-      std::vector<double> B_effective, E_effective;
-      std::vector<std::vector<double> > B_hat_partial;
+      std::array<double, 3> turbAtPoint, B, B_hat;
+      std::array<double, 3> B_effective, E_effective;
+      std::array<std::array<double, 3>, 3> B_hat_partial;
 
-      bool gen_turb = true;
+      bool gen_turb = false;
 
       //Functions for generating the B-field
-      int generate_bfield_at_point(double t, std::vector<double> &B_out, std::vector<double> &pos);
-      int generate_bfield_at_point(double t, std::vector<double> &pos);
+      int generate_bfield_at_point(double t, std::array<double, 3> &B_out, std::array<double, 3> &pos);
+      int generate_bfield_at_point(double t, std::array<double, 3> &pos);
 
-      int calculate_B_effective(std::vector<double> &GC_velocity, std::vector<double> &pos, double u);
+      int calculate_B_effective(std::array<double, 3> &GC_velocity, std::array<double, 3> &pos, double u);
 
       int calculate_E_effective(Particle &particle, double v_perp);
 
-      int calculate_partial_b_hat(      std::vector<double> &B_at_point, std::vector<double> GC_velocity,
-                                        std::vector<double> &GC_position, double timestep, double t);
-
-      double B_amp_current();
+      int calculate_partial_b_hat(      std::array<double, 3> &B_at_point, std::array<double, 3> &GC_velocity,
+                                        std::array<double, 3> &GC_position, double t, double timestep);
+                                        
 
       //General functions
-      int generate_turbulence_at_point(std::vector<double> &pos);
+      int generate_turbulence_at_point(std::array<double, 3> &pos);
       int initialize_turbulence(Ran &ran);
       int reinitialize_turbulence(Ran &ran);
 
@@ -105,20 +101,19 @@ class Bfield{
 
  /********** CONSTANTS **********/
 
-      //pi = M_PI
       const double two_pi = 2 * M_PI;
 
-      std::complex<double> im; //For working with complex numbers
+      std::complex<double> im;            // For working with complex numbers
 
       //Magnetic field
-      int n_k = 50; //Nr. of modes used to generate the turbulence
-      double B_0 = 1.0;
-      double B_rms_turb = 1.0;            //Normalized magnetic field,
-      const double gamma = 5.0 / 3.0;     //Power law for the fluctuation spectrum
-      double lambda_min = 0.2;            //Smallest wavelength, in parsecs
-      double lambda_max = 10.0;           //Largest wavelength, in parsecs
-      double k_min = two_pi / lambda_max; //Smallest wavenumber
-      double k_max = two_pi / lambda_min; //Largest wavenumber
+      int n_k = 50;                       // Nr. of modes used to generate the turbulence
+      double B_0 = 1.0;                   // Static magnetic field RMS
+      double B_rms_turb = 1.0;            // Normalized magnetic field,
+      const double gamma = 5.0 / 3.0;     // Power law for the fluctuation spectrum
+      double lambda_min = 0.2;            // Smallest wavelength, in parsecs
+      double lambda_max = 10.0;           // Largest wavelength, in parsecs
+      double k_min = two_pi / lambda_max; // Smallest wavenumber
+      double k_max = two_pi / lambda_min; // Largest wavenumber
 
  /********* END CONSTANTS ********/
 
@@ -147,6 +142,12 @@ class Bfield{
       double dB_min;
 
  /*** END NORMALIZED PARAMETERS **/
+
+ /****** TEMPORARY VECTORS *******/
+      std::vector<double> e_k;
+    
+      std::array< std::complex<double>, 3 > delta_B;
+      std::vector< std::complex<double> > F, epsilon_x, epsilon_y, epsilon_z, B_x_k, B_y_k, B_z_k;
 };
 
 #endif

@@ -100,6 +100,7 @@ int main(int argc, char* argv[])
     Bfield bfield(init, rng);
     Particle particle(init);
     Trajectory trajectory(init);
+    Guiding_Center GC(init);
     
     std::ofstream file;                                                 // To hold position of particles
     std::string filename = GCT::generate_unique_filename_positions(bfield, particle, procID);
@@ -115,10 +116,10 @@ int main(int argc, char* argv[])
     for(int i = 0; i < init.N; i++){                                    // i < number of particles to test
 
 
-      trajectory.initialize_new_GC(particle, bfield, rng);
+      GC.initialize_new_GC(particle, bfield, rng, trajectory.t_start);
   
 
-      trajectory.Propagate_GC(bfield, particle);
+      trajectory.Propagate_GC(bfield, particle, GC, init, rng);
 
 
      //Print progress in %

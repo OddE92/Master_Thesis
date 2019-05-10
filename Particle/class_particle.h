@@ -5,15 +5,14 @@
 
 #include "Initializer/initializer.h"
 #include "NR3/ran.h"
+#include "Constants/constants.h"
 
 #include <vector>
 #include <cmath>
 
-constexpr double c = 2.99792458e8;              // Speed of light in m/s
-
 class Particle{
     public:
-        std::vector<double> pos, v;
+        std::array<double, 3> pos, v;
 
         double E, q, m, gamma_l;
         double v_total;

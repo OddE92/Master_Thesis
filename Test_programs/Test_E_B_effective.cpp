@@ -34,15 +34,16 @@ int main(){
     Bfield bfield(init, rng);
     Particle particle(init);
     Trajectory trajectory(init);
+    Guiding_Center GC(init);
  
-    trajectory.initialize_new_GC(particle, bfield, rng);
+    GC.initialize_new_GC(particle, bfield, rng, 0.0);
 
-    bfield.generate_bfield_at_point(0, trajectory.GC_position);
-    bfield.calculate_partial_b_hat(bfield.B, trajectory.GC_velocity, trajectory. GC_position, 1.0, 0.0);
+    bfield.generate_bfield_at_point(0, GC.GC_position);
+    bfield.calculate_partial_b_hat(bfield.B, GC.GC_velocity, GC. GC_position, 0.0);
  
-    bfield.calculate_B_effective(trajectory.GC_velocity, trajectory.GC_position, trajectory.u);
+    bfield.calculate_B_effective(GC.GC_velocity, GC.GC_position, GC.u);
  
-    bfield.calculate_E_effective(particle, trajectory.v_perp);
+    bfield.calculate_E_effective(particle, GC.v_perp);
 
     std::cout << "B_effective: " << bfield.B_effective[0] << ' ' << bfield.B_effective[1] << ' ' << bfield.B_effective[2] << std::endl;
     std::cout << "E_effective: " << bfield.E_effective[0] << ' ' << bfield.E_effective[1] << ' ' << bfield.E_effective[2] << std::endl;

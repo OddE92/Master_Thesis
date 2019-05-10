@@ -1,0 +1,57 @@
+{
+            "type": "shell",
+            "label": "Build Calculate Trajectory",
+            "command": "mpiCC",
+            "args": [
+                "-I/home/odde92/Desktop/cpp/GCT",
+                "-I/lib/x86-64-linux-gnu/openmpi/include",
+
+                "-L/home/gudrun/oddeinan/arma/armadillo-9.300.2",
+
+                "-g",
+                "Simulations/calculate_trajectory.cpp",
+
+                "Bfield/class_bfield.h",
+                "Bfield/class_bfield.cpp",
+
+                "Functions/functions.h",
+                "Functions/functions.cpp",
+                "Functions/funcs_gen_samples.cpp",
+
+                "Guiding_center/class_guiding_center.h",
+                "Guiding_center/class_guiding_center.cpp",
+
+                "Initializer/initializer.h",
+
+                "Integrator/odeint.h",
+                "Integrator/stepperbase.h",
+                "Integrator/stepperBS.h",
+                "Integrator/stepperdopr5.h",
+
+                "NR3/nr3.h",
+                "NR3/ran.h",
+
+                "Particle/class_particle.h",
+                "Particle/class_particle.cpp",
+
+                "Trajectory/class_trajectory.h",
+                "Trajectory/class_trajectory.cpp",
+                
+                "-o",
+                "exe/calculate_trajectory.exe",
+
+                "-O2",
+
+                "-std=c++17",
+
+                "-lstdc++fs",
+                "-larmadillo",
+                "-llapack",
+                "-lblas"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },

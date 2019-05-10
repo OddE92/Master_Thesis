@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
       particle.initialize_new_particle(rng);
   
 
-      trajectory.Propagate_particle(bfield, particle);
+      trajectory.Propagate_particle(particle, init, rng);
 
 
       //Print progress in %

@@ -2,6 +2,10 @@
 
 #include <boost/mpi.hpp>
 
+/***********
+ * These functions are all tested and working for all cases.
+***********/
+
 Eigenvectors::Eigenvectors(int length_of_D_ij, int num_points_recorded, int num_of_MF_instances){
     all_Da_ij.resize(num_of_MF_instances, std::vector<double>(num_points_recorded, 0));
     Da_ij.resize(length_of_D_ij);

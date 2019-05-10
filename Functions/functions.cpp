@@ -4,15 +4,16 @@
 
 #include <iostream>
 #include <filesystem>
-
 namespace fs = std::filesystem;
 
 int GCT::calculate_eigenvalues_3x3_sym(std::vector<double> &inVector, int startMatrix, std::vector<double> &outVector){
 
-    //Assumes a 3x3 symmetric matrix, taking the top half of the matrix, including the diagonal
-    //It also assumes it gets the full vector with all values, not only the 3x3 matrix you want
-    //Thus startMatrix is also passed to find the start of the matrix.
-    //This function is as dumb as they come, and assumes the theory is correct.
+    // Assumes a 3x3 symmetric matrix, taking the top half of the matrix, including the diagonal
+    // It also assumes it gets the full vector with all values, not only the 3x3 matrix you want
+    // Thus startMatrix is also passed to find the start of the matrix.
+    // This function is as dumb as they come, and assumes the theory is correct.
+
+    // This is used together with the eigenvectors, and is supposed to take vectors (not array<double, 3>)
 
     arma::mat A(3, 3, arma::fill::zeros);
 
@@ -33,20 +34,28 @@ int GCT::calculate_eigenvalues_3x3_sym(std::vector<double> &inVector, int startM
 
 
 
-
-std::vector<double> GCT::calculate_vector_rotation(std::vector<double> b_before, std::vector<double> b_after, double &theta){
+std::array<double, 3> GCT::calculate_vector_rotation(std::array<double, 3> b_before, std::array<double, 3> b_after, double &theta){
     // Takes two vectors, returns the axis the rotation is about, as well as the angle of rotation theta
-
+ 
     GCT::normalize_vector(b_before); GCT::normalize_vector(b_after);        // Work with normalized vectors
 
-    theta = std::acos(GCT::vector_dot_product(b_before, b_after));          // Angle of rotation in the plane
-
+    double dot = GCT::vector_dot_product(b_before, b_after);
+    
+    if (dot - 1 > 0)        theta = 0;
+    else if (dot + 1 < 0)   theta = M_PI;
+    else                    theta = std::acos(dot);                         // Angle of rotation in the plane
+ 
     return GCT::vector_cross_product(b_before, b_after);                    // Normal vector to the plane of rotation
 }
 
-int GCT::normalize_vector(std::vector<double> &A){
+
+
+
+int GCT::normalize_vector(std::array<double, 3> &A){
     double amp = GCT::vector_amplitude(A);
     
+    if(amp == 0) return 1;
+
     for(int i = 0; i < A.size(); i++){
         A[i] = A[i]/amp;
     }
@@ -55,14 +64,21 @@ int GCT::normalize_vector(std::vector<double> &A){
 }
 
 
-int GCT::rotate_vector_in_plane(std::vector<double> &vect, const std::vector<double> &axis, double theta){
+
+
+int GCT::rotate_vector_in_plane(std::array<double, 3> &vect, const std::array<double, 3> &axis, double theta){
     
+    // Rotates the vector vect by an angle theta in the plane that has \hat{n} = axis
+    // axis should be normalized before being sent to this function (add GCT::normalize_vector(axis) to remove assumption).
+
     double cost = std::cos(theta);
     double cost1 = 1-cost;
     double sint = std::sin(theta);
 
-    arma::vec v(vect);
+    arma::vec v(3);
+    v[0] = vect[0]; v[1] = vect[1]; v[2] = vect[2];
 
+        // Rotation matrix for rotation in a plane, given the normal vector. Taken from wikipedia.
     arma::mat R = {
         {   cost + axis[0]*axis[0]*cost1,   axis[0]*axis[1]*cost1 - axis[2]*sint,   axis[0]*axis[2]*cost1 + axis[1]*sint    },
         {   axis[1]*axis[0]*cost1 + axis[2]*sint,   cost + axis[1]*axis[1]*cost1,   axis[1]*axis[2]*cost1 - axis[0]*sint    },
@@ -76,14 +92,14 @@ int GCT::rotate_vector_in_plane(std::vector<double> &vect, const std::vector<dou
     return 0;
 }
 
-int GCT::scalar_dot_vector(double s, std::vector<double> &v){
+int GCT::scalar_dot_vector(double s, std::array<double, 3> &v){
   for(int i = 0; i < v.size(); i++){
     v[i] = s*v[i];
   }
     return 0;
 }
 
-double GCT::frexp10(double arg, int * exp)
+double GCT::frexp10(double arg, int * exp)                  // Gets the exponent of arg and stores it in exp
 {
    *exp = (arg == 0) ? 0 : 1 + (int)std::floor(std::log10(std::fabs(arg) ) );
    return arg * std::pow(10 , -(*exp));    
@@ -91,7 +107,7 @@ double GCT::frexp10(double arg, int * exp)
 
 
 
-
+    // Generates a unique filename for storing the positions. Always ends in ~/r_rank[procID].dat
 std::string GCT::generate_unique_filename_positions(Bfield &bfield, Particle &particle, int procID){
 
     std::string filename;
@@ -105,6 +121,8 @@ std::string GCT::generate_unique_filename_positions(Bfield &bfield, Particle &pa
 
     return filename;
 }
+
+    // Generates a unique filename for storing the eigenvalues. Always ends in ~/eigenvalues.dat
 std::string GCT::generate_unique_filename_eigenvalues(double E, double L_max, int procID){
 
     std::string filename;
@@ -153,7 +171,7 @@ int GCT::create_directory_to_file(std::string filename){
 }
 
 
-
+    // Print function for testing
 void GCT::print_Dij(std::vector<double> &inVector, int startMatrix){
 
   std::cout << std::setprecision(5);
@@ -167,8 +185,12 @@ void GCT::print_Dij(std::vector<double> &inVector, int startMatrix){
 
 }
 
-
+    // Overload << for simple vector-printing while debugging.
 std::ostream& operator<<(std::ostream& os, const std::vector<double> &v){
+  os << v[0] << ' ' << v[1] << ' ' << v[2];
+  return os;
+}
+std::ostream& operator<<(std::ostream& os, const std::array<double, 3> &v){
   os << v[0] << ' ' << v[1] << ' ' << v[2];
   return os;
 }

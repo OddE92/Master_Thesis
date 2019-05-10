@@ -11,15 +11,15 @@
 
 constexpr int N_TEST_PARTICLES      =   100;
 constexpr int N_RANDOM_MODES        =   500;
-constexpr int T_RUN_FOR_YEARS       =   1e5;
-constexpr double B_REGULAR_COMP     =   10000.0;                                         //microGauss
+constexpr int T_RUN_FOR_YEARS       =   1e4;
+constexpr double B_REGULAR_COMP     =   10.0;                                         //microGauss
 constexpr double B_TURBULENT_COMP   =   4.0;                                         //microGauss
-constexpr double E_TOTAL            =   1e15;                                        //eV
+constexpr double E_TOTAL            =   1e16;                                        //eV
 constexpr double LAMBDA_MAX         =   150.0;                                        //pc
 constexpr double LAMBDA_MIN         =   0.027;                                       //pc    (0.27 = Rl/10 for B = 4, E = e16)
 constexpr double Q_CHARGE           =   1;                                           //# electron charges
 constexpr double M_MASS             =   938.2720813;                                 //MeV/c^2
-constexpr double ERROR_MAX          =   1.0e-6;                                     
+constexpr double ERROR_MAX          =   1.0e-06;                                     
 constexpr double ERROR_MIN          =   1.0e-08;
 const int NUM_POINTS_RECORDED       =   log10(T_RUN_FOR_YEARS) * 9 + 1;
 const int D_IJ_LENGTH               =   NUM_POINTS_RECORDED * 7;
@@ -36,31 +36,22 @@ int main(void){
 
     Ran rng(init.seed);
     
-    //Trajectory trajectory1(init);
-    Bfield bfield(init, rng);
     Particle particle(init);
     Trajectory trajectory(init);
-    Guiding_Center GC(init);
-
 
     particle.initialize_new_particle(rng);
-    particle.v = { 1/std::sqrt(3.0)*c, 1/std::sqrt(3)*c, 1/std::sqrt(3)*c};
-    std::cout << "vx0: " << particle.v[0] << " vy0: " << particle.v[1] << " vz0: " << particle.v[2] << std::endl;   
 
-    GC.initialize_new_GC(particle, bfield, rng, 0.0);
+    std::cout << "vx0: " << particle.v[0] << " vy0: " << particle.v[1] << " vz0: " << particle.v[2] << std::endl;
+    std::cout << "pos: " << particle.pos << '\n'; 
 
-    trajectory.Propagate_particle_wtf(bfield, particle);
+    trajectory.Propagate_particle_wtf(particle, init, rng);
 
-
-    GC.R_Larmor = 1.0810076e-15 * (GC.v_perp / c) * (particle.E / (bfield.B_0 + bfield.B_rms_turb*0)); 
-
-    std::cout << "R_l: " << GC.R_Larmor << std::endl;
 
     clock_t end = clock();
     double elapsed_secs = double(end - begin)/CLOCKS_PER_SEC;
 
     std::cout << "Program ended in " << elapsed_secs << " seconds \n";
-
+    return 0;
 }
 
 int initialize_init(Initializer &init, int procID){

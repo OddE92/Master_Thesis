@@ -6,30 +6,33 @@
 #include "Particle/class_particle.h"
 #include "Bfield/class_bfield.h"
 #include "Guiding_center/class_guiding_center.h"
+#include "Functions/functions.h"
+#include "Constants/constants.h"
 
 #include <vector>
+#include <array>
 
 class Trajectory{
     public:
-
+      // For holding diffusion tensor and particle positions
         std::vector<double> D_ij, D_ij_time;
         std::vector<double> r_vect;
         
         double t, t_start, t_end, dt;
         double min_err, max_err;
         double unit_coeff;
-        //double R_Larmor;
-        const double mtopc = 3.24078e-17;
+        double R_Larmor;
+        double timestep;
 
        // RK-solver variables
         int nvar;
         VecDoub ystart;
 
        // Functions  
-        int Propagate_particle(Bfield &bfield, Particle &particle);
-        int Propagate_particle_wtf(Bfield &bfield, Particle &particle);
-        int Propagate_GC(Bfield &bfield, Particle &particle, Guiding_Center &GC);
-        int Propagate_GC_wtf(Bfield &bfield, Particle &particle, Guiding_Center &GC);
+        int Propagate_particle(Particle &particle, Initializer &init, Ran &rng);
+        int Propagate_particle_wtf(Particle &particle, Initializer &init, Ran &rng);
+        int Propagate_GC(Bfield &bfield, Particle &particle, Guiding_Center &GC, Initializer &init, Ran &rng);
+        int Propagate_GC_wtf(Bfield &bfield, Particle &particle, Guiding_Center &GC, Initializer &init, Ran &rng);
         
         int calculate_D_ij(int num_particles);
 
@@ -47,7 +50,12 @@ struct Rhs_lorentz_equation{
 
     double unit_coeff;
 
-    Rhs_lorentz_equation(Particle &particle){ 
+    std::array<double, 3> B, r;
+
+    Bfield bfield;
+
+    //Rhs_lorentz_equation(Particle &particle, Initializer &init, Ran &rng) : bfield(init, rng){ 
+    Rhs_lorentz_equation(Particle &particle, Initializer &init, Ran &rng) : bfield(init, rng){  
         unit_coeff = 8.987 * particle.q / (particle.gamma_l * particle.m);      //Coefficient for the units when dv/dt = unit_coeff * V x B
     }
 
@@ -59,17 +67,19 @@ struct Rhs_lorentz_equation{
 
     void operator() (const Doub t, VecDoub_I &y, VecDoub_O &dydx){
 
+            // Generates the bfield at the point, then calculates the new velocity and positions
+        
+        r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
+
+        bfield.generate_bfield_at_point(t, B, r);               
+
         dydx[0] = y[3];                         // dydx[0] = vx
         dydx[1] = y[4];                         // dydx[1] = vy
         dydx[2] = y[5];                         // dydx[2] = vz
 
-        dydx[3] = unit_coeff * (y[4] * y[8] - y[5] * y[7]);    // ax = vy*Bz - vz*By
-        dydx[4] = unit_coeff * (y[5] * y[6] - y[3] * y[8]);    // ay = vz*Bx - vx*Bz
-        dydx[5] = unit_coeff * (y[3] * y[7] - y[4] * y[6]);    // az = vx*By - vy*Bx
-
-        dydx[6] = 0;                            // 6, 7 and 8 are to keep the B-field
-        dydx[7] = 0;                            // it is updated at each step in Odeint::integrate();
-        dydx[8] = 0;
+        dydx[3] = unit_coeff * (y[4] * B[2] - y[5] * B[1]);    // ax = vy*Bz - vz*By
+        dydx[4] = unit_coeff * (y[5] * B[0] - y[3] * B[2]);    // ay = vz*Bx - vx*Bz
+        dydx[5] = unit_coeff * (y[3] * B[1] - y[4] * B[0]);    // az = vx*By - vy*Bx
 
     } 
 
@@ -77,32 +87,49 @@ struct Rhs_lorentz_equation{
 
 struct GC_equation{
 
-    double q, m;
-    double qm_coeff = 1/1.1658e-11;
+    /*****
+     * 
+     *  The guiding center equation is more complex than the Lorentz-equations, and 
+     *  requires more info at each step. Thus it has its own particle and GC 
+     *  as well as a bfield. It also keeps some extra doubles and arrays to
+     *  hold all values needed in the calculations.
+     * 
+     *  operator() is ound in class_trajectory.cpp
+     * 
+     *  The equations are taken from:
+     *      Cary, John R. and Brizard, Alain J.
+     *      Hamiltonian Theory of Guiding-Center Motion
+     *      https://journals.aps.org/rmp/abstract/10.1103/RevModPhys.81.693
+     * 
+     *  Equations:
+     *      dy/dt[0-2]  = (3.13)
+     *      dy/dt[3]    = (3.12)
+     *      dy/dt[4]    = (3.7)
+     * 
+    *****/
 
-    GC_equation(Particle &p){
-        q = p.q; m = p.m;
-    }
  /*
     y[0-2]  =   GC_position
     y[3]    =   u
     y[4]    =   gyrophase
-    y[5-7]  =   B_effective
-    y[8-10] =   E_eff_cross_B_hat
-    y[11]   =   B_eff_dot_E_eff
-    y[12]   =   B_eff_parallell
-    y[13]   =   B_eff_amplitude
  */
-    void operator() (const Doub t, VecDoub_I &y, VecDoub_O &dydx){
 
-        for(int i = 0; i < 3; i++) dydx[i] = (y[3]/y[12])*y[i+5] + (c/y[12])*y[i+8];            // dydx[0-2] = GC_v[0-2]
+    Bfield bfield;
+    Particle particle;
+    Guiding_Center GC;
 
-        dydx[3] = (q / m) * (1 / y[12]) * y[10];                                                // dydx[3] = d/dt u
+    double q, m, theta;
 
-        dydx[4] = (q / (m*c)) * y[13];                                                          // dydx[4] = d/dt gyrophase
+    std::array<double, 3> r, E_eff_cross_B_hat, b_hat_prev, axis;
 
-        for(int i = 5; i<y.size();i++) dydx[i] = 0;                                             // Rest are set in integrate_GC()
+    double B_eff_dot_E_eff, B_eff_parallell, B_eff_amp;
+
+    GC_equation(Particle &pparticle, Bfield &bbfield, Guiding_Center &GGC) : particle(pparticle), bfield(bbfield), GC(GGC){
+        q = particle.q; m = particle.m;
+        b_hat_prev = bbfield.B_hat;
     }
+
+    void operator() (const Doub t, VecDoub_I &y, VecDoub_O &dydx);
 
 };
 

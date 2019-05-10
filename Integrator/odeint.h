@@ -8,6 +8,12 @@
 #include "Functions/functions.h"
 #include "Guiding_center/class_guiding_center.h"
 
+#include <iomanip>
+
+/* 
+    Only changes here are in the integrate functions, to store D_ij at each point.
+*/
+
 struct Output
 {
     Int kmax;
@@ -73,8 +79,10 @@ struct Output
     template <class Stepper>
     void out(const Int nstp, const Doub x, VecDoub_I &y, Stepper &s, const Doub h)
     {
-        if (!dense)
+        if (!dense){
+            std::cout << "Dense output not set in Output!" << '\n';
             throw("dense output not set in Output!");
+        }
         if (nstp == -1)
         {
             save(x, y);
@@ -122,9 +130,8 @@ struct Odeint
            const Doub hminn, Output &outt, typename Stepper::Dtype &derivss);
     void integrate();
     void integrate( std::vector<double> &D_ij, std::vector<double> &D_ij_time, std::vector<double> &r_vect, 
-                    Bfield &bfield, Particle &particle, const double x_max);
-    void integrate_GC(    Trajectory &trajectory, Guiding_Center &GC,
-                    Bfield &bfield, Particle &particle, const double x_max);
+                    Particle &particle, const double x_max);
+    void integrate_GC(  Trajectory &trajectory, const double x_max);            // GC passed through GC_equation instead
 };
 
 // Original constructor below:
@@ -146,53 +153,22 @@ Odeint<Stepper>::Odeint(VecDoub_IO &ystartt, const Doub xx1, const Doub xx2,
 /************************************************************/
 /******************** INTEGRATE FUNCTION ********************/
 
+// After the last changes integrate_GC and integrate are almost identical.
+
 template <class Stepper>
-void Odeint<Stepper>::integrate_GC(    Trajectory &trajectory, Guiding_Center &GC,
-                                        Bfield &bfield, Particle &particle, const double x_max)         //x = t for this program
+void Odeint<Stepper>::integrate_GC(Trajectory &trajectory, const double x_max)         //x = t for this program
 {
     int count = 0, logcount = 1;                            // Counters to track when to save D_ij
     int posCounter = 0;
 
     double t;                                               // Used to test if step should be recorded
-    double theta;
 
-    const double mtopc = 3.24078e-17;
-
-
-    std::vector<double> r(3,0), E_eff_cross_B_hat(3,0), b_hat_prev(3,0), axis(3,0), v_perp_hat(3,0);
-
-    r = GC.GC_position;                             // GC_position is initialized in parsec
-
-    bfield.generate_bfield_at_point(0.0, r);
-
-    bfield.calculate_partial_b_hat(bfield.B, GC.GC_velocity, GC.GC_position, h, x);
-
-    bfield.calculate_B_effective(GC.GC_velocity, GC.GC_position, GC.u);
-    bfield.calculate_E_effective(particle, GC.v_perp);
-
-    E_eff_cross_B_hat = GCT::vector_cross_product(bfield.E_effective, bfield.B_hat);
-
-    double B_eff_dot_E_eff = GCT::vector_dot_product(bfield.B_effective, bfield.E_effective);
-
-    double B_eff_parallell = GCT::vector_dot_product(bfield.B_hat, bfield.B_effective);
-
-    double B_eff_amp = GCT::vector_amplitude(bfield.B_effective);
-
-
-        // GC_position is initialized to [pc], but we need [m] during the calculation
- y[0] = GC.GC_position[0]/mtopc; y[1] = GC.GC_position[1]/mtopc; y[2] = GC.GC_position[2]/mtopc;      // y[0-2]
- y[3] = GC.u;                                                                                            // y[3]
- y[4] = GC.gyrophase;                                                                                    // y[4]
- y[5] = bfield.B_effective[0]; y[6] = bfield.B_effective[1]; y[7] = bfield.B_effective[2];                       // y[5-7]
- y[8] = E_eff_cross_B_hat[0]; y[9] = E_eff_cross_B_hat[1]; y[10] = E_eff_cross_B_hat[2];                         // y[8-9]
- y[11] = B_eff_dot_E_eff;                                                                                        // y[10]
- y[12] = B_eff_parallell;                                                                                        // y[11]
- y[13] = B_eff_amp;                                                                                              // y[12]
-
-std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::endl;
-    derivs(x, y, dydx);                                     // First step
     
+ std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::endl;
+    derivs(x, y, dydx);                                     // First step
 
+
+    
     if (dense)
         out.out(-1, x, y, s, h);
     else
@@ -221,58 +197,18 @@ std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::e
             out.save(x, y);
         }
 
-        b_hat_prev = bfield.B_hat;
+        derivs.GC.timestep = h;                             // Make sure timestep is updated (GC_equation r.GC.timestep)
 
-        r = { y[0]*mtopc, y[1]*mtopc, y[2]*mtopc };
-        bfield.generate_bfield_at_point(x, r);
-        
-        GC.GC_velocity = { y[3]*bfield.B_hat[0], y[3]*bfield.B_hat[1], y[3]*bfield.B_hat[2] };
+        std::cout << "derivs timestep: " << derivs.GC.timestep << std::endl;
+        std::cout << "\n Timestep: " << h << "\n\n";
 
-        //calculate particle.v
-        axis = GCT::calculate_vector_rotation(b_hat_prev, bfield.B_hat, theta);     // Axis now holds the normal vector for the rotation
-        GCT::rotate_vector_in_plane(GC.hat_1, axis, theta);                 // \hat{1} is now rotated to the new plane
-        GC.a_hat = GC.hat_1;                                        // set phase to zero
-    //std::cout << "hat_1: " << trajectory.hat_1;
-        GCT::rotate_vector_in_plane(GC.a_hat, bfield.B_hat, y[4]);          // rotate by the gyrophase
-    //std::cout << "a_hat: " << trajectory.a_hat << std::endl;
-        GC.v_perp_hat = GCT::vector_cross_product(GC.a_hat, bfield.B_hat);
-    //std::cout << "v_perp_hat: " << v_perp_hat << std::endl;
-        GCT::normalize_vector(GC.v_perp_hat);
-        particle.v = {                                                              // Add velocity in perp and parallell directions
-            GC.v_perp*GC.v_perp_hat[0] + GC.v_parallell*bfield.B_hat[0],
-            GC.v_perp*GC.v_perp_hat[1] + GC.v_parallell*bfield.B_hat[1],
-            GC.v_perp*GC.v_perp_hat[2] + GC.v_parallell*bfield.B_hat[2],
-        };
-/*
-        std::cout << "GC_pos: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::endl;
-        std::cout << "Particl.v: " << particle.v << std::endl;
-        std::cout << "gyrophase: " << y[4] << std::endl;
-        std::cout << "u: " << y[3] << std::endl << std::endl;
-*/
-        bfield.calculate_partial_b_hat(bfield.B, GC.GC_velocity, GC.GC_position, h, x);
-
-        bfield.calculate_B_effective(GC.GC_velocity, r, y[3]);
-
-        bfield.calculate_E_effective(particle, GC.v_perp);                              // Assume v_perp = const
-
-        E_eff_cross_B_hat = GCT::vector_cross_product(bfield.E_effective, bfield.B_hat);
-
-        B_eff_dot_E_eff = GCT::vector_dot_product(bfield.B_effective, bfield.E_effective);
-
-        B_eff_parallell = GCT::vector_dot_product(bfield.B_hat, bfield.B_effective);
-
-        B_eff_amp = GCT::vector_amplitude(bfield.B_effective);
-
-        y[5] = bfield.B_effective[0]; y[6] = bfield.B_effective[1]; y[7] = bfield.B_effective[2];
-        y[8] = E_eff_cross_B_hat[0]; y[9] = E_eff_cross_B_hat[1]; y[10] = E_eff_cross_B_hat[2];
-        y[11] = B_eff_dot_E_eff;
-        y[12] = B_eff_parallell;
-        y[13] = B_eff_amp;
+        if(std::isnan(y[0])) return;                        // Break if the position goes to NaN
 
 
+            // If t > count * 10^yearcount, store value of D_ij
         double t = x+h;
         if( t/31557600 - (logcount * pow(10, count)) > __DBL_EPSILON__){
-
+            using GCT::mtopc;
             // Add each particles coordinate to the sum in D_ij
             // D_ij holds the upper half, including the diagonal, of a symmetric matrix
             // stored as a 1D-array to comply with MPIs send and recieve functions.
@@ -301,6 +237,9 @@ std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::e
             posCounter += 7;
         }//end if save D_ij
 
+
+
+
         if ((x - x2) * (x2 - x1) >= 0.0) //check if end is reached
         {   
             std::cout << "I'm in this if thingy" << std::endl;
@@ -311,6 +250,8 @@ std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::e
 
             return;
         }
+
+
 
 
         if (abs(s.hnext) <= hmin){
@@ -328,26 +269,12 @@ std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::e
 
 template <class Stepper>
 void Odeint<Stepper>::integrate(    std::vector<double> &D_ij, std::vector<double> &D_ij_time, std::vector<double> &r_vect,
-                                    Bfield &bfield, Particle &particle, const double x_max)                     //x = t for this program
+                                    Particle &particle, const double x_max)                     //x = t for this program
 {
     int count = 0, logcount = 1;                            // Counters to track when to save D_ij
     int posCounter = 0;
 
     double t;                                               // Used to test if step should be recorded
-
-    const double mtopc = 3.24078e-17;
-
-    std::vector<double> B(3,0), r(3,0);                          // To temporary hold B and r
-
-    // y[6-8] holds the B-field
-    // y[0-2] holds the position
-    
-    r = particle.pos;
-    r = { r[0]*mtopc, r[1]*mtopc, r[2]*mtopc };
-
-    bfield.generate_bfield_at_point(x, B, r);
-
-    y[6] = B[0]; y[7] = B[1]; y[8] = B[2];
 
     derivs(x, y, dydx);
     
@@ -381,16 +308,15 @@ void Odeint<Stepper>::integrate(    std::vector<double> &D_ij, std::vector<doubl
         }
 
       // Generate B-field at new point
-        r = { y[0]*mtopc, y[1]*mtopc, y[2]*mtopc };
+        //r = { y[0]*mtopc, y[1]*mtopc, y[2]*mtopc };
 
-        bfield.generate_bfield_at_point(x, B, r);
-        y[6] = B[0]; y[7] = B[1]; y[8] = B[2];
+        //bfield.generate_bfield_at_point(x, B, r);
+        //y[6] = B[0]; y[7] = B[1]; y[8] = B[2];
 
-        std::cout << "Bfield: " << B << std::endl;
-
+     //std::cout << "Timestep h: " << h << std::endl;
         double t = x+h;
         if( t/31557600 - (logcount * pow(10, count)) > __DBL_EPSILON__){
-
+            using GCT::mtopc;
             // Add each particles coordinate to the sum in D_ij
             // D_ij holds the upper half, including the diagonal, of a symmetric matrix
             // stored as a 1D-array to comply with MPIs send and recieve functions.

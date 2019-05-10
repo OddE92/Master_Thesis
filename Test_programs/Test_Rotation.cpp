@@ -1,5 +1,6 @@
 #include "Bfield/class_bfield.h"
 #include "Particle/class_particle.h"
+#include "Guiding_center/class_guiding_center.h"
 #include "Trajectory/class_trajectory.h"
 #include "Functions/functions.h"
 
@@ -37,12 +38,13 @@ int main(){
     Bfield bfield(init, rng);
     Particle particle(init);
     Trajectory trajectory(init);
+    Guiding_Center GC(init);
 
-    std::vector<double> axis, b_hat_prev;
+    std::array<double, 3> axis, b_hat_prev;
  
     double theta;
 
-    trajectory.initialize_new_GC(particle, bfield, rng);
+    GC.initialize_new_GC(particle, bfield, rng, 0.0);
 
     b_hat_prev = { 0, 1, 1 };
     bfield.B_hat = {0, 1, -1 };
@@ -55,23 +57,23 @@ int main(){
 
     std::cout << "axis: " << axis << std::endl;
     std::cout << "Theta: " << theta << std::endl << std::endl;
-    std::cout << "hat_1: " << trajectory.hat_1 << std::endl;
-    std::cout << "a_hat: " << trajectory.a_hat << std::endl;
+    std::cout << "hat_1: " << GC.hat_1 << std::endl;
+    std::cout << "a_hat: " << GC.a_hat << std::endl;
     
 
-        GCT::rotate_vector_in_plane(trajectory.hat_1, axis, theta);                 // \hat{1} is now rotated to the new plane
-        trajectory.a_hat = trajectory.hat_1;                                        // set phase to zero
-        GCT::rotate_vector_in_plane(trajectory.a_hat, bfield.B_hat, M_PI);          // rotate by the gyrophase
+        GCT::rotate_vector_in_plane(GC.hat_1, axis, theta);                 // \hat{1} is now rotated to the new plane
+        GC.a_hat = GC.hat_1;                                        // set phase to zero
+        GCT::rotate_vector_in_plane(GC.a_hat, bfield.B_hat, M_PI);          // rotate by the gyrophase
 
-    std::cout << "\nAfter rotation:\nhat_1: " << trajectory.hat_1 << std::endl;
-    std::cout << "a_hat: " << trajectory.a_hat << std::endl;
+    std::cout << "\nAfter rotation:\nhat_1: " << GC.hat_1 << std::endl;
+    std::cout << "a_hat: " << GC.a_hat << std::endl;
 
-    std::vector<double> v_perp_hat = GCT::vector_cross_product(trajectory.a_hat, bfield.B_hat);
+    std::array<double, 3> v_perp_hat = GCT::vector_cross_product(GC.a_hat, bfield.B_hat);
         GCT::normalize_vector(v_perp_hat);
         particle.v = {                                                              // Add velocity in perp and parallell directions
-            trajectory.v_perp*v_perp_hat[0] + trajectory.v_parallell*bfield.B_hat[0],
-            trajectory.v_perp*v_perp_hat[1] + trajectory.v_parallell*bfield.B_hat[1],
-            trajectory.v_perp*v_perp_hat[2] + trajectory.v_parallell*bfield.B_hat[2],
+            GC.v_perp*v_perp_hat[0] + GC.v_parallell*bfield.B_hat[0],
+            GC.v_perp*v_perp_hat[1] + GC.v_parallell*bfield.B_hat[1],
+            GC.v_perp*v_perp_hat[2] + GC.v_parallell*bfield.B_hat[2],
         };
 
     return 0;

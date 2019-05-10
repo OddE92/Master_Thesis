@@ -110,7 +110,10 @@ void StepperDopr5<D>::dy(const Doub h,D &derivs) {
 	for (i=0;i<n;i++) {
 		yerr[i]=h*(e1*dydx[i]+e3*k3[i]+e4*k4[i]+e5*k5[i]+e6*k6[i]+e7*dydxnew[i]);
 		//std::cout << "yerr: " << yerr[i] << endl;
-		if(std::isnan(yerr[i])) throw("Hissyfit");
+		if(std::isnan(yerr[i])) {
+			std::cout << "This is in stepperdopr5\n";
+			throw("Hissyfit");
+			}
 	}
 	//std::cout << endl;
 }
@@ -154,8 +157,10 @@ void StepperDopr5<D>::step(const Doub htry,D &derivs) {
 		dy(h,derivs);
 		Doub err=error();
 		if (con.success(err,h)){if(i > 25) std::cout << "Ok, moving on. \n"; break;}
-		if (abs(h) <= abs(x)*EPS)
+		if (abs(h) <= abs(x)*EPS){
+			std::cout << "Stepsize underflow in stepperdopr5! \n";
 			throw("stepsize underflow in StepperDopr5");
+			}
 		if(i == 25) std::cout << "Taking some time here... \n";
 		if(i == 100) std::cout << "Got to 100... \n"; 
 		if(i > 10000) throw("I'm stuck");

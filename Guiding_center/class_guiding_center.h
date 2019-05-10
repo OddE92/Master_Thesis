@@ -7,21 +7,22 @@
 
 class Guiding_Center{
     public:
-        std::vector<double> GC_velocity, GC_position;
-        std::vector<double> a_hat, hat_1;
-        std::vector<double> v_perp_hat;
+        std::array<double, 3> GC_velocity, GC_position;
+        std::array<double, 3> a_hat, hat_1;
+        std::array<double, 3> v_perp_hat;
 
         double gyrofrequency;
         double gyrophase;
         double u;
         double v_perp, v_parallell;
         double R_Larmor;
+        double timestep;
 
         // Functions
         int initialize_new_GC(Particle &particle, Bfield &bfield, Ran &rng, double t);
 
-        double calculate_v_parallell(const std::vector<double> &particle_velocity, const std::vector<double> &B_hat);
-        double calculate_v_perp(const std::vector<double> &particle_velocity, const double v_parallell);
+        double calculate_v_parallell(const std::array<double, 3> &particle_velocity, const std::array<double, 3> &B_hat);
+        double calculate_v_perp(const std::array<double, 3> &particle_velocity, const double v_parallell);
 
 
         Guiding_Center();
