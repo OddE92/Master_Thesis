@@ -156,14 +156,15 @@ void StepperDopr5<D>::step(const Doub htry,D &derivs) {
 	for (int i=0;;i++) {
 		dy(h,derivs);
 		Doub err=error();
-		if (con.success(err,h)){if(i > 25) std::cout << "Ok, moving on. \n"; break;}
+		if (con.success(err,h)){//if(i > 25) std::cout << "Ok, moving on. \n"; 
+		break;}
 		if (abs(h) <= abs(x)*EPS){
 			std::cout << "Stepsize underflow in stepperdopr5! \n";
 			throw("stepsize underflow in StepperDopr5");
 			}
-		if(i == 25) std::cout << "Taking some time here... \n";
-		if(i == 100) std::cout << "Got to 100... \n"; 
-		if(i > 10000) throw("I'm stuck");
+		//if(i == 25) std::cout << "Taking some time here... \n";
+		//if(i == 100) std::cout << "Got to 100... \n"; 
+		//if(i > 10000) throw("I'm stuck");
 	}
 	if (dense)
 		prepare_dense(h,derivs);

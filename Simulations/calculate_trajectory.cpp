@@ -10,16 +10,16 @@
 #include <random>
 
 constexpr int N_TEST_PARTICLES      =   100;
-constexpr int N_RANDOM_MODES        =   500;
-constexpr int T_RUN_FOR_YEARS       =   1e4;
+constexpr int N_RANDOM_MODES        =   100;
+constexpr int T_RUN_FOR_YEARS       =   5e3;
 constexpr double B_REGULAR_COMP     =   10.0;                                         //microGauss
-constexpr double B_TURBULENT_COMP   =   4.0;                                         //microGauss
-constexpr double E_TOTAL            =   1e16;                                        //eV
+constexpr double B_TURBULENT_COMP   =   (1/100.0)*B_REGULAR_COMP;                      //microGauss
+constexpr double E_TOTAL            =   1e17;                                        //eV
 constexpr double LAMBDA_MAX         =   150.0;                                        //pc
 constexpr double LAMBDA_MIN         =   0.027;                                       //pc    (0.27 = Rl/10 for B = 4, E = e16)
 constexpr double Q_CHARGE           =   1;                                           //# electron charges
 constexpr double M_MASS             =   938.2720813;                                 //MeV/c^2
-constexpr double ERROR_MAX          =   1.0e-06;                                     
+constexpr double ERROR_MAX          =   1.0e-16;                                     
 constexpr double ERROR_MIN          =   1.0e-08;
 const int NUM_POINTS_RECORDED       =   log10(T_RUN_FOR_YEARS) * 9 + 1;
 const int D_IJ_LENGTH               =   NUM_POINTS_RECORDED * 7;
@@ -35,7 +35,7 @@ int main(void){
     initialize_init(init, 1);
 
     Ran rng(init.seed);
-    
+    Bfield bfield(init, rng);
     Particle particle(init);
     Trajectory trajectory(init);
 
@@ -44,7 +44,8 @@ int main(void){
     std::cout << "vx0: " << particle.v[0] << " vy0: " << particle.v[1] << " vz0: " << particle.v[2] << std::endl;
     std::cout << "pos: " << particle.pos << '\n'; 
 
-    trajectory.Propagate_particle_wtf(particle, init, rng);
+    //trajectory.Propagate_particle_wtf(particle, init, rng, bfield);
+    trajectory.Propagate_particle_wtf(particle, bfield);
 
 
     clock_t end = clock();
@@ -58,7 +59,7 @@ int initialize_init(Initializer &init, int procID){
   init.procID = procID;
 
   std::srand(time(0));  //rand() +                                    //Add this line to seed for "more" randomness
-  init.seed = rand() + 1000 * procID;                                 //Sets the seed for the RNG. Set to const 
+  init.seed = 20; //rand() + 1000 * procID;                                 //Sets the seed for the RNG. Set to const 
                                                                       //to generate equal results
 
   init.n_k = N_RANDOM_MODES;                                          //#modes used to generate TMF

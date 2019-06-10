@@ -13,7 +13,7 @@
 #include <cmath>
 
 constexpr int N_TEST_PARTICLES      =   100;
-constexpr int N_RANDOM_MODES        =   500;
+constexpr int N_RANDOM_MODES        =   100;
 constexpr int T_RUN_FOR_YEARS       =   1e5;
 constexpr double B_REGULAR_COMP     =   1.0;                                         //microGauss
 constexpr double B_TURBULENT_COMP   =   4.0;                                         //microGauss
@@ -26,7 +26,7 @@ constexpr double ERROR_MAX          =   1.0e-05;
 constexpr double ERROR_MIN          =   1.0e-08;
 const int NUM_POINTS_RECORDED       =   log10(T_RUN_FOR_YEARS) * 9 + 1;
 const int D_IJ_LENGTH               =   NUM_POINTS_RECORDED * 7;
-constexpr bool GEN_TURB_GLOB        =   false;
+constexpr bool GEN_TURB_GLOB        =   true;
 
 
 int initialize_init(Initializer &init, int procID);

@@ -13,7 +13,7 @@
 #include <cmath>
 
 constexpr int N_TEST_PARTICLES      =   100;
-constexpr int N_RANDOM_MODES        =   500;
+constexpr int N_RANDOM_MODES        =   50;
 constexpr int T_RUN_FOR_YEARS       =   1e5;
 constexpr double B_REGULAR_COMP     =   0.0;                                         //microGauss
 constexpr double B_TURBULENT_COMP   =   4.0;                                         //microGauss
@@ -110,16 +110,17 @@ int main(int argc, char* argv[])
       std::cout << "Couldn't open " << filename << std::endl;
       throw("Couldn't open " + filename);
     }
-      
+    
 
     for(int i = 0; i < init.N; i++){                                    //i < number of particles to test
 
-
+      std::cout << "When do I get here?\n";
       particle.initialize_new_particle(rng);
-  
+      std::cout << "What about here?\n";
 
-      trajectory.Propagate_particle(particle, init, rng);
+      trajectory.Propagate_particle(particle, bfield);
 
+      std::cout << "I did a particle\n";
 
       //Print progress in %
       if( static_cast<double>(i+1)/init.N - percentCounter > __DBL_EPSILON__ ){
@@ -156,7 +157,7 @@ int initialize_init(Initializer &init, int procID){
   init.procID = procID;
 
   std::srand(time(0));  //rand() +                                    //Add this line to seed for "more" randomness
-  init.seed = rand() + 1000 * procID;                                 //Sets the seed for the RNG. Set to const 
+  init.seed = 1000 * procID;                                 //Sets the seed for the RNG. Set to const 
                                                                       //to generate equal results
 
   init.n_k = N_RANDOM_MODES;                                          //#modes used to generate TMF
@@ -185,6 +186,7 @@ int initialize_init(Initializer &init, int procID){
   init.start_pos = { 0, 0, 0 };                                       //Set here as default. Should be randomly chosen in the program
   init.start_vel = { 1, 0, 0 };
 
+  init.GCT = false;
   return 0;
 }
 

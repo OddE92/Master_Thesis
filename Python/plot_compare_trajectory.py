@@ -37,8 +37,16 @@ fig2.suptitle('Sample of Trajectories')
 ax = fig2.add_subplot(1, 2, 1, projection='3d')
 first = ax.plot3D(tr1[:,0], tr1[:,1], tr1[:,2])
 
+ax.set_xlim(min(tr2[:,0]), max(tr2[:,0]))
+ax.set_ylim(min(tr2[:,0]), max(tr2[:,0]))
+ax.set_zlim(min(tr2[:,0]), max(tr2[:,0]))
+
 ax = fig2.add_subplot(1, 2, 2, projection='3d')
 first = ax.plot3D(tr2[:,0], tr2[:,1], tr2[:,2])
+
+ax.set_xlim(min(tr2[:,0]), max(tr2[:,0]))
+ax.set_ylim(min(tr2[:,0]), max(tr2[:,0]))
+ax.set_zlim(min(tr2[:,0]), max(tr2[:,0]))
 
 # ax = fig2.add_subplot(2, 3, 3, projection='3d')
 # first = ax.plot3D(tr3[:,0], tr3[:,1], tr3[:,2])

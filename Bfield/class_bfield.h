@@ -34,8 +34,10 @@
 #include <vector>
 #include <complex>
 #include <cmath>
+#include <array>
 
 #include "Particle/class_particle.h"
+//#include "Guiding_center/class_guiding_center.h"
 
 #include "NR3/ran.h"
 #include "Initializer/initializer.h"
@@ -59,9 +61,15 @@ struct Bfield_func{
         //return 0;
      }
      double z(double t, std::array<double, 3> &pos){
-         return 0;
+        return 0;
      }
 
+     double B_rho(std::array<double, 3> &pos){
+          return 100.0/std::sqrt( std::sqrt(pos[0]*pos[0]+pos[1]*pos[1]+pos[2]*pos[2]) );
+     }
+     double B_rho_phi(std::array<double, 3> &pos){
+          return B_rho(pos)*std::cos(std::atan2(pos[1], pos[0]) - std::log(std::sqrt(pos[0]*pos[0]+pos[1]*pos[1]+pos[2]*pos[2])/100.0));
+     }
 };
 
 
@@ -75,19 +83,23 @@ class Bfield{
       std::array<double, 3> B_effective, E_effective;
       std::array<std::array<double, 3>, 3> B_hat_partial;
 
+      std::array<double, 3> nabla_u;
+
       bool gen_turb = false;
 
       //Functions for generating the B-field
       int generate_bfield_at_point(double t, std::array<double, 3> &B_out, std::array<double, 3> &pos);
       int generate_bfield_at_point(double t, std::array<double, 3> &pos);
 
-      int calculate_B_effective(std::array<double, 3> &GC_velocity, std::array<double, 3> &pos, double u);
+      int calculate_B_effective(std::array<double, 3> &GC_velocity, std::array<double, 3> &pos, double u, double m, double q);
 
-      int calculate_E_effective(Particle &particle, double v_perp);
+      int calculate_E_effective(   Particle &particle, const std::array<double, 3> &GC_velocity, const std::array<double, 3> &GC_position,
+                                   const double mu, const double timestep, const double dudt);
+      int calculate_E_effective(   Particle &particle, double v_perp);
 
       int calculate_partial_b_hat(      std::array<double, 3> &B_at_point, std::array<double, 3> &GC_velocity,
                                         std::array<double, 3> &GC_position, double t, double timestep);
-                                        
+
 
       //General functions
       int generate_turbulence_at_point(std::array<double, 3> &pos);
@@ -148,6 +160,8 @@ class Bfield{
     
       std::array< std::complex<double>, 3 > delta_B;
       std::vector< std::complex<double> > F, epsilon_x, epsilon_y, epsilon_z, B_x_k, B_y_k, B_z_k;
+
+      
 };
 
 #endif

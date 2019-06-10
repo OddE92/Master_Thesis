@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <cmath>
+#include <array>
 
 class Particle{
     public:

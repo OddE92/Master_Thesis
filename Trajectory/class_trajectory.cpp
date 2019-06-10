@@ -58,6 +58,9 @@ int Trajectory::Propagate_GC(Bfield &bfield, Particle &particle, Guiding_Center 
 
     ode.integrate_GC(*this, this->t_end);
 
+    GC.GC_position = r.GC.GC_position;
+    GC.R_Larmor = r.GC.R_Larmor;
+
     return 0;
 }
 
@@ -78,6 +81,8 @@ int Trajectory::Propagate_GC_wtf(Bfield &bfield, Particle &particle, Guiding_Cen
     
     ode.integrate_GC(*this, this->t_end);
 
+    std::cout << "NOK: " << ode.nok << "; Nbad: " << ode.nbad << std::endl;
+
     std::ofstream file;
 
     file.open("Data/trajectory_GC.dat");
@@ -96,7 +101,7 @@ int Trajectory::Propagate_GC_wtf(Bfield &bfield, Particle &particle, Guiding_Cen
 
 
 
-    // Same as above, but for the standard Lorentz force.
+  /*  // Same as above, but for the standard Lorentz force.
 int Trajectory::Propagate_particle(Particle &particle, Initializer &init, Ran &rng){
     double hmin = 0.0;                  // Needed in Odeint
     this->t = t_start;                  // Reset t before propagating the particle
@@ -113,9 +118,28 @@ int Trajectory::Propagate_particle(Particle &particle, Initializer &init, Ran &r
     ode.integrate(this->D_ij, this->D_ij_time, this->r_vect, particle, this->t_end);
 
     return 0;
+}*/
+    // Overload for generate_samples
+int Trajectory::Propagate_particle(Particle &particle, Bfield &bfield){
+    double hmin = 0.0;                  // Needed in Odeint
+    this->t = t_start;                  // Reset t before propagating the particle
+
+    ystart[0] = particle.pos[0]; ystart[1] = particle.pos[1]; ystart[2] = particle.pos[2];
+    ystart[3] = particle.v[0]; ystart[4] = particle.v[1]; ystart[5] = particle.v[2];
+
+    Output out;
+
+    Rhs_lorentz_equation r(particle, bfield);
+
+    Odeint<StepperBS<Rhs_lorentz_equation> > ode(ystart, t_start, t_end, max_err, max_err, dt, hmin, out, r);
+    std::cout << "t: " << this->t << " t_start: " << t_start << " t_end: " << t_end << " dt: " << dt << std::endl;
+    ode.integrate(this->D_ij, this->D_ij_time, this->r_vect, particle, this->t_end);
+
+    return 0;
 }
     // Same as above, writes to file
-int Trajectory::Propagate_particle_wtf(Particle &particle, Initializer &init, Ran &rng){         // Used to save a single particle trajectory
+    /*
+int Trajectory::Propagate_particle_wtf(Particle &particle, Initializer &init, Ran &rng, Bfield &bfield){         // Used to save a single particle trajectory
     double hmin = 0.0;
 
     ystart[0] = particle.pos[0]; ystart[1] = particle.pos[1]; ystart[2] = particle.pos[2];
@@ -123,7 +147,37 @@ int Trajectory::Propagate_particle_wtf(Particle &particle, Initializer &init, Ra
 
     Output out(-1);
 
-    Rhs_lorentz_equation r(particle, init, rng);
+    Rhs_lorentz_equation r(particle, bfield);
+
+    Odeint<StepperBS<Rhs_lorentz_equation> > ode(ystart, t_start, t_end, max_err, max_err, dt, hmin, out, r);
+    
+    ode.integrate(this->D_ij, this->D_ij_time, this->r_vect, particle, bfield, this->t_end);
+
+    std::cout << "NOK: " << ode.nok << "; Nbad: " << ode.nbad << std::endl;
+
+    std::ofstream file;
+
+    file.open("Data/trajectory.dat");
+    std::cout << "Ant. punkter:" << out.count << std::endl;
+    for(int i = 0; i < out.count; i++){
+        file << out.ysave[0][i]*GCT::mtopc << ' ' << out.ysave[1][i]*GCT::mtopc << ' ' << out.ysave[2][i]*GCT::mtopc << '\n';
+    }
+
+    file.close();
+
+    return 0;
+}
+    */
+
+int Trajectory::Propagate_particle_wtf(Particle &particle, Bfield &bfield){         // Used to save a single particle trajectory
+    double hmin = 0.0;
+
+    ystart[0] = particle.pos[0]; ystart[1] = particle.pos[1]; ystart[2] = particle.pos[2];
+    ystart[3] = particle.v[0]; ystart[4] = particle.v[1]; ystart[5] = particle.v[2];
+
+    Output out(-1);
+
+    Rhs_lorentz_equation r(particle, bfield);
 
     Odeint<StepperBS<Rhs_lorentz_equation> > ode(ystart, t_start, t_end, max_err, max_err, dt, hmin, out, r);
     
@@ -161,8 +215,8 @@ Trajectory::Trajectory(Initializer &init){
 
     r_vect.resize(init.num_points_recorded * 3);          // Holds position at each recorded point
 
-    if(init.GCT){ nvar = 5;
-    }else {nvar = 6;}
+    if(init.GCT){ nvar = 4;
+    }else {nvar = 9;}
 
     ystart.resize(nvar);                                  // Used to set initial values
 }
@@ -199,11 +253,86 @@ Trajectory::Trajectory(){
 void GC_equation::operator() (const Doub t, VecDoub_I &y, VecDoub_O &dydx){
 
         r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
-    std::cout << "r: " << r << std::endl;
+        //GC.gyrophase = y[4];
+
+    //std::cout << "r: " << r << std::endl;
         bfield.generate_bfield_at_point(t, r);
-        
-        GC.GC_velocity = { y[3]*bfield.B_hat[0], y[3]*bfield.B_hat[1], y[3]*bfield.B_hat[2] };
    
+        //std::cout << "GC_pos: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::endl;
+        //std::cout << "Particl.v: " << particle.v << " |v|: " << GCT::vector_amplitude(particle.v) << std::endl;
+        //std::cout << "gyrophase: " << y[4] << std::endl;
+        //std::cout << "u: " << y[3] << std::endl;
+ 
+        bfield.calculate_partial_b_hat(bfield.B, GC.GC_velocity, r, t, GC.timestep);
+
+ //std::cout << "B_partial: \n" << bfield.B_hat_partial[0] << std::endl << bfield.B_hat_partial[1] << std::endl << bfield.B_hat_partial[2] << std::endl;
+
+        //calculate_particle_v();
+
+        GC.v_parallell = GCT::vector_dot_product(GC.GC_velocity, bfield.B_hat);
+        GC.v_perp = GC.calculate_v_perp(particle.v, GC.v_parallell);
+
+
+        bfield.calculate_B_effective(GC.GC_velocity, r, y[3], particle.m, particle.q);
+        //bfield.calculate_E_effective(particle, GC.GC_velocity, GC.GC_position, GC.mu, GC.timestep, dydx[3]);  // Assume v_perp = const
+        bfield.calculate_E_effective(particle, y[3]);
+
+     //std::cout << "B_eff: " << bfield.B_effective << std::endl;
+     //std::cout << "E_eff: " << bfield.E_effective << std::endl << std::endl;
+
+        E_eff_cross_B_hat = GCT::vector_cross_product(bfield.E_effective, bfield.B_hat);
+
+        B_eff_dot_E_eff = GCT::vector_dot_product(bfield.B_effective, bfield.E_effective);
+
+        B_eff_parallell = GCT::vector_dot_product(bfield.B_hat, bfield.B_effective);
+
+        B_eff_amp = GCT::vector_amplitude(bfield.B_effective);
+
+        //GC.u = GCT::vector_dot_product(GC.GC_velocity, bfield.B_hat); // currently using y[3] as GC.u
+
+        for(int i = 0; i < 3; i++){
+            dydx[i] =                                                        // dydx[0-2] = GC_v[0-2]
+                (y[3]/(B_eff_parallell))*bfield.B_effective[i] + (1e-10/B_eff_parallell)*E_eff_cross_B_hat[i];   
+                                                            // 1e10 as (V/m)/µG = 1e10m/s
+            //std::cout << " dydx[" << i << "]: " << dydx[i] << std::endl;
+        }
+
+        GC.GC_velocity = { dydx[0], dydx[1], dydx[2] };
+
+        dydx[3] = (1/GCT::mq) * (q / m) * (1 / B_eff_parallell) * B_eff_dot_E_eff;                  // dydx[3] = d/dt u
+
+        std::cout << "B_hat_partial:\n" <<
+             ' ' << bfield.B_hat_partial[0] << std::endl << 
+             ' ' << bfield.B_hat_partial[1] << std::endl << 
+             ' ' << bfield.B_hat_partial[2] << std::endl;
+             
+        std::cout << "du/dt: " << dydx[3] << std::endl;
+        std::cout << "Timestep: " << GC.timestep << "\n";
+        std::cout << "E*: " << bfield.E_effective << std::endl;
+        std::cout << "gamma_l: " << particle.gamma_l << std::endl;
+        std::cout << "Nabla u: " << bfield.nabla_u << std::endl << 
+                     "u: " << GC.u << std::endl << std::endl;
+
+        //dydx[4] = (1/GCT::mq) * (q / (m*GCT::c)) * B_eff_amp;                                       // dydx[4] = d/dt gyrophase
+
+        GC.gyrophase += (1/GCT::mq) * (q / (m*GCT::c)) * B_eff_amp * t;
+
+        GC.dudt = dydx[3];
+        b_hat_prev = bfield.B_hat;
+
+        //std::getchar();
+ /*
+    y[0-2]  =   GC_position
+    y[3]    =   u
+    y[4]    =   gyrophase
+
+ */
+    }
+
+
+
+
+int GC_equation::calculate_particle_v(){
   /********** CALCULATE PARTICLE.V **********/
     std::cout << "B_hat_prev: " << b_hat_prev << std::endl;
     std::cout << "B_hat: " << bfield.B_hat << std::endl;
@@ -217,6 +346,7 @@ void GC_equation::operator() (const Doub t, VecDoub_I &y, VecDoub_O &dydx){
         GC.a_hat = GC.hat_1;                                                // set phase to zero
     std::cout << "hat_1: " << GC.hat_1 << std::endl;
         GCT::rotate_vector_in_plane(GC.a_hat, bfield.B_hat, GC.gyrophase);          // rotate by the gyrophase
+    std::cout << "Gyrophase: " << GC.gyrophase << std::endl;
     std::cout << "B_hat: " << bfield.B_hat << std::endl;
     std::cout << "a_hat: " << GC.a_hat << std::endl;
         GC.v_perp_hat = GCT::vector_cross_product(GC.a_hat, bfield.B_hat);
@@ -228,46 +358,6 @@ void GC_equation::operator() (const Doub t, VecDoub_I &y, VecDoub_O &dydx){
             GC.v_perp*GC.v_perp_hat[2] + GC.v_parallell*bfield.B_hat[2],
         };
   /********** END CALCULATE PARTICLE.V **********/
+  return 0;
+}
 
-        std::cout << "GC_pos: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::endl;
-        std::cout << "Particl.v: " << particle.v << std::endl;
-        std::cout << "gyrophase: " << y[4] << std::endl;
-        std::cout << "u: " << y[3] << std::endl;
- 
-        bfield.calculate_partial_b_hat(bfield.B, GC.GC_velocity, GC.GC_position, t, GC.timestep);
-
- //std::cout << "B_partial: \n" << bfield.B_hat_partial[0] << std::endl << bfield.B_hat_partial[1] << std::endl << bfield.B_hat_partial[2] << std::endl;
-
-
-        bfield.calculate_B_effective(GC.GC_velocity, r, y[3]);
-        bfield.calculate_E_effective(particle, GC.v_perp);                              // Assume v_perp = const
-     std::cout << "B_eff: " << bfield.B_effective << std::endl;
-     std::cout << "E_eff: " << bfield.E_effective << std::endl << std::endl;
-        E_eff_cross_B_hat = GCT::vector_cross_product(bfield.E_effective, bfield.B_hat);
-
-        B_eff_dot_E_eff = GCT::vector_dot_product(bfield.B_effective, bfield.E_effective);
-
-        B_eff_parallell = GCT::vector_dot_product(bfield.B_hat, bfield.B_effective);
-
-        B_eff_amp = GCT::vector_amplitude(bfield.B_effective);
-
-
-            if(std::isnan(bfield.B_effective[0])){ 
-                std::cout << "B_eff is nan\n";
-                throw("Error");
-                }
-
-        for(int i = 0; i < 3; i++) dydx[i] =                                                        // dydx[0-2] = GC_v[0-2]
-            (y[3]/B_eff_parallell)*bfield.B_effective[i] + (1/B_eff_parallell)*E_eff_cross_B_hat[i];    
-
-        dydx[3] = (1/GCT::mq) * (q / m) * (1 / B_eff_parallell) * B_eff_dot_E_eff;                  // dydx[3] = d/dt u
-
-        dydx[4] = (1/GCT::mq) * (q / (m*GCT::c)) * B_eff_amp;                                       // dydx[4] = d/dt gyrophase
-
- /*
-    y[0-2]  =   GC_position
-    y[3]    =   u
-    y[4]    =   gyrophase
-
- */
-    }

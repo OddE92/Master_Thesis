@@ -18,6 +18,7 @@ int calculate_eigenvalues_3x3_sym(std::vector<double> &inVector, int startMatrix
 
 double frexp10(double arg_in, int * exponent_out);        // takes a double and stores the exponent in exponent_out
 
+double calculate_R_larmor(const double v_perp, const double E, const double B_amp);
 
 /********** INLINED VECTOR FUNCTIONS **********/
 
@@ -38,12 +39,14 @@ inline double vector_dot_product(const std::array<double, 3> &A, const std::arra
 /***********************************************/
 
 int scalar_dot_vector(double s, std::array<double, 3> &v);
+std::array<double, 3> scalar_dot_vector_r(double s, const std::array<double, 3> &v);
 
 
 
     // Filename generators
 std::string generate_unique_filename_positions(Bfield &bfield, Particle &particle, int procID);
 std::string generate_unique_filename_eigenvalues(double E, double L_max, int procID);
+std::string generate_unique_filename_compare(double E, int B_0, int procID);
 
 
     // Directory generator

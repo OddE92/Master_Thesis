@@ -14,9 +14,11 @@ class Guiding_Center{
         double gyrofrequency;
         double gyrophase;
         double u;
+        double mu;
         double v_perp, v_parallell;
         double R_Larmor;
         double timestep;
+        double dudt;
 
         // Functions
         int initialize_new_GC(Particle &particle, Bfield &bfield, Ran &rng, double t);
@@ -25,7 +27,7 @@ class Guiding_Center{
         double calculate_v_perp(const std::array<double, 3> &particle_velocity, const double v_parallell);
 
 
-        Guiding_Center();
+        Guiding_Center(){};
         Guiding_Center(Initializer &init);
         ~Guiding_Center(){};
 

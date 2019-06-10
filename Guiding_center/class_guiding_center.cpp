@@ -6,7 +6,9 @@
 int Guiding_Center::initialize_new_GC(Particle &particle, Bfield &bfield, Ran &rng, double t){
   particle.initialize_new_particle(rng);              // Need a new particle to initiate a new GC
  
-  bfield.generate_bfield_at_point(t, particle.pos);   // Generate the field at the starting point
+  std::array<double, 3> r = {particle.pos[0]*GCT::mtopc, particle.pos[1]*GCT::mtopc, particle.pos[2]*GCT::mtopc};
+
+  bfield.generate_bfield_at_point(t, r);   // Generate the field at the starting point
 
  
   gyrofrequency = 8.987 * (particle.q / particle.m) * GCT::vector_amplitude(bfield.B);  // 8.987 is the unit coefficient for µG, e and MeV/c^2
@@ -35,8 +37,11 @@ int Guiding_Center::initialize_new_GC(Particle &particle, Bfield &bfield, Ran &r
   GCT::normalize_vector(a_hat);
 
 
-    // the GC position is a distance R_larmor away from the particle position, in the direction of \hat{a}
-  GC_position = { particle.pos[0] + R_Larmor*a_hat[0], particle.pos[1] + R_Larmor*a_hat[1], particle.pos[2] + R_Larmor*a_hat[2] };
+    // the GC position is a distance R_larmor away from the particle position, in the direction of \hat{a}, unit = meter
+  GC_position = { particle.pos[0] + (R_Larmor*a_hat[0])/GCT::mtopc, 
+                  particle.pos[1] + (R_Larmor*a_hat[1])/GCT::mtopc, 
+                  particle.pos[2] + (R_Larmor*a_hat[2])/GCT::mtopc 
+                };
 
 
   hat_1 = { -a_hat[0], -a_hat[1], -a_hat[2] };                            // \hat{1} is fixed in this orientation wrt B pr definition

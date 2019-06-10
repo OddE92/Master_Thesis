@@ -98,6 +98,13 @@ int GCT::scalar_dot_vector(double s, std::array<double, 3> &v){
   }
     return 0;
 }
+std::array<double, 3> GCT::scalar_dot_vector_r(double s, const std::array<double, 3> &v){
+  std::array<double, 3> b;
+  for(int i = 0; i < v.size(); i++){
+    b[i] = s*v[i];
+  }
+    return b;
+}
 
 double GCT::frexp10(double arg, int * exp)                  // Gets the exponent of arg and stores it in exp
 {
@@ -135,6 +142,19 @@ std::string GCT::generate_unique_filename_eigenvalues(double E, double L_max, in
                          + "/eigenvalues.dat";
 
     return filename;
+}
+
+std::string GCT::generate_unique_filename_compare(double E, int Bpercent, int procID){
+
+    int expntn;
+
+    GCT::frexp10(E, &expntn);
+
+    std::string filename = "Data/Compare/Ee" + std::to_string(expntn-1) + "_Bpercent" + std::to_string(Bpercent);
+    
+    if(procID == 0) filename += "_GCT";
+
+    return filename + ".dat";
 }
 
 
@@ -183,6 +203,10 @@ void GCT::print_Dij(std::vector<double> &inVector, int startMatrix){
   
   std::cout << std::endl;
 
+}
+
+double GCT::calculate_R_larmor(const double v_perp, const double E, const double B_amp){
+    return (1.0810076e-15 * (v_perp / GCT::c) * (E / B_amp) );
 }
 
     // Overload << for simple vector-printing while debugging.

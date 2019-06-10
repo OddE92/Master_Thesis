@@ -4,6 +4,9 @@
 namespace GCT{
 
     constexpr double mtopc = 3.24078e-17;
+    constexpr double pctom = 1/mtopc;
+
+    constexpr double qtoe = 6.2415091e18;
 
     constexpr double mq = 1.1658e-11;                 //unit coefficient of m/e in the equation for B_effective
 

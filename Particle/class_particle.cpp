@@ -5,12 +5,13 @@
 int Particle::initialize_new_particle(Ran &rng){
     
     // Avoid using 0 due to singularity in some bfields at r = 0
-    pos = {1*GCT::mtopc, 1*GCT::mtopc, 1*GCT::mtopc};
+    //pos = {25*GCT::pctom, 25*GCT::pctom, 0};
+    pos = { 0, 0, 0, };
 
     double ranPhi = 2 * M_PI * rng.doub();
     double ranTheta = acos(1.0 - 2 * rng.doub());
     
-    v[0] = cos(ranPhi) * sin(ranTheta) * v_total;
+    v[0] = cos(ranPhi) * sin(ranTheta) * v_total;      // -signs becuse the 0-seeded RNG-velocity points inwards in the spiral field
     v[1] = sin(ranPhi) * sin(ranTheta) * v_total;
     v[2] = cos(ranTheta) * v_total;
 

@@ -14,11 +14,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import Normalize
 
 trajectory = np.loadtxt('Data/trajectory_GC.dat')                               # Reads the data from the RK4 approx
-#trajectory = np.loadtxt('data/RK4_approx_stepsizectrl.dat')
-#trajectory2 = np.loadtxt('data/B_average.dat')
-#mfield = np.loadtxt('data/test_mf.dat')
-#test_rng = np.loadtxt('data/test_rng.dat')
-
+#trajectory = np.loadtxt('Data/GC_trajectory_ODE.dat')
 fig1 = plt.figure(1)
 ax = fig1.gca(projection='3d')
 ax.plot3D(trajectory[:,0], trajectory[:,1], trajectory[:,2])
@@ -28,9 +24,9 @@ ax.set_xlabel('x [pc]')
 ax.set_ylabel('y [pc]')
 ax.set_zlabel('z [pc]')
 
-ax.set_xlim(min(trajectory[:,0]), max(trajectory[:,0]))
-ax.set_ylim(min(trajectory[:,0]), max(trajectory[:,0]))
-ax.set_zlim(min(trajectory[:,0]), max(trajectory[:,0]))
+#ax.set_xlim(min(trajectory[:,0]), max(trajectory[:,0]))
+#ax.set_ylim(min(trajectory[:,0]), max(trajectory[:,0]))
+#ax.set_zlim(min(trajectory[:,0]), max(trajectory[:,0]))
 
 #Plot multiple trajectories
 # tr1 = np.loadtxt('data/RK4_approx_stepsizectrl_nonturb.dat')

@@ -29,8 +29,10 @@ class Trajectory{
         VecDoub ystart;
 
        // Functions  
-        int Propagate_particle(Particle &particle, Initializer &init, Ran &rng);
-        int Propagate_particle_wtf(Particle &particle, Initializer &init, Ran &rng);
+        //int Propagate_particle(Particle &particle, Initializer &init, Ran &rng);
+        int Propagate_particle(Particle &particle, Bfield &bfield);
+        //int Propagate_particle_wtf(Particle &particle, Initializer &init, Ran &rng, Bfield &bfield);
+        int Propagate_particle_wtf(Particle &particle, Bfield &bfield);
         int Propagate_GC(Bfield &bfield, Particle &particle, Guiding_Center &GC, Initializer &init, Ran &rng);
         int Propagate_GC_wtf(Bfield &bfield, Particle &particle, Guiding_Center &GC, Initializer &init, Ran &rng);
         
@@ -54,11 +56,14 @@ struct Rhs_lorentz_equation{
 
     Bfield bfield;
 
-    //Rhs_lorentz_equation(Particle &particle, Initializer &init, Ran &rng) : bfield(init, rng){ 
-    Rhs_lorentz_equation(Particle &particle, Initializer &init, Ran &rng) : bfield(init, rng){  
+    Rhs_lorentz_equation(Particle &particle){ 
+        unit_coeff = 8.987 * particle.q / (particle.gamma_l * particle.m); 
+    }
+ 
+    Rhs_lorentz_equation(Particle &particle, Bfield &bbfield) : bfield(bbfield){  
         unit_coeff = 8.987 * particle.q / (particle.gamma_l * particle.m);      //Coefficient for the units when dv/dt = unit_coeff * V x B
     }
-
+ 
     /*
         y[0] = x;  y[1] = y;  y[2] = z;
         y[3] = vx; y[4] = vy; y[5] = vz;
@@ -68,19 +73,27 @@ struct Rhs_lorentz_equation{
     void operator() (const Doub t, VecDoub_I &y, VecDoub_O &dydx){
 
             // Generates the bfield at the point, then calculates the new velocity and positions
-        
-        r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
 
-        bfield.generate_bfield_at_point(t, B, r);               
+            r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
 
+            bfield.generate_bfield_at_point(t, B, r);            
+     
         dydx[0] = y[3];                         // dydx[0] = vx
         dydx[1] = y[4];                         // dydx[1] = vy
         dydx[2] = y[5];                         // dydx[2] = vz
-
+     
         dydx[3] = unit_coeff * (y[4] * B[2] - y[5] * B[1]);    // ax = vy*Bz - vz*By
         dydx[4] = unit_coeff * (y[5] * B[0] - y[3] * B[2]);    // ay = vz*Bx - vx*Bz
         dydx[5] = unit_coeff * (y[3] * B[1] - y[4] * B[0]);    // az = vx*By - vy*Bx
+     /*
+        dydx[3] = unit_coeff * (y[4] * y[8] - y[5] * y[7]);    // ax = vy*Bz - vz*By
+        dydx[4] = unit_coeff * (y[5] * y[6] - y[3] * y[8]);    // ay = vz*Bx - vx*Bz
+        dydx[5] = unit_coeff * (y[3] * y[7] - y[4] * y[6]);    // az = vx*By - vy*Bx
 
+        dydx[6] = 0;
+        dydx[7] = 0;
+        dydx[8] = 0;
+     */
     } 
 
 };
@@ -121,6 +134,8 @@ struct GC_equation{
     double q, m, theta;
 
     std::array<double, 3> r, E_eff_cross_B_hat, b_hat_prev, axis;
+
+    int calculate_particle_v();
 
     double B_eff_dot_E_eff, B_eff_parallell, B_eff_amp;
 

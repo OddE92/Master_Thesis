@@ -1,4 +1,5 @@
 #include "Bfield/class_bfield.h"
+#include "Functions/functions.h"
 
 #include <fstream>
 #include <vector>
