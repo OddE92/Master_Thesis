@@ -58,8 +58,8 @@ for E in range (15, 19):
 # Figure 1 plots dr/R_L averages
 #
 ################################################################
-matplotlib.rc('xtick', labelsize=14)
-matplotlib.rc('ytick', labelsize=14)
+matplotlib.rc('xtick', labelsize=24)
+matplotlib.rc('ytick', labelsize=24)
 
 
 fig1 = plt.figure(1)
@@ -69,21 +69,17 @@ marker = it.cycle((r'$\dag$', '1', '+', '2', 'x'))
 color = it.cycle(("#FFA500", 'g', 'r', 'k', 'b'))
 
 for i in range(4, -1, -1):
-    ax.plot(Earr, drR_larmorAverage_E[:,i], linestyle='', marker=marker.next(), markersize=14, color=color.next())
+    ax.plot(Earr, drR_larmorAverage_E[:,i], linestyle='', marker=marker.next(), markersize=22, color=color.next())
 
 ax.legend(  [r"$B_{\mathrm{turb}}/B_0 = 1.00$", r"$B_{\mathrm{turb}}/B_0 = 0.50$", r"$B_{\mathrm{turb}}/B_0 = 0.25$",
              r"$B_{\mathrm{turb}}/B_0 = 0.10$", r"$B_{\mathrm{turb}}/B_0 = 0.01$"], 
-             fontsize='18', frameon=False)
+             fontsize='28', frameon=False)
 
 
 #ax.set_title(r"Average length of $dr$ proportional to average $R_L$ as functions of energy and $B_0/B_{\mathrm{turb}}$", 
 #                fontsize='22', y=1.03)
-ax.set_xlabel(r"Energy [PeV]", fontsize='18')
-ax.set_ylabel(r"dr/$\mathrm{R_L}$", fontsize='18')
-
-#ax.plot(Earr, R_larmorAverage_E[:,0], 'o', color='blue')
-#ax.plot(Earr, drAverage_E[:,0], '+', color='black')
-#ax.legend(["dr/R_L", "R_L", "dr"], loc='upper center')
+ax.set_xlabel(r"Energy [PeV]", fontsize='28')
+ax.set_ylabel(r"dr/$\mathrm{R_L}$", fontsize='28')
 
 ################################################################
 # 
@@ -94,16 +90,16 @@ fig2 = plt.figure(2)
 ax2 = fig2.gca()
 
 for i in range(4, -1, -1):
-    ax2.plot(Earr, dtAverage_E[:,i], linestyle='', marker=marker.next(), markersize=14, color=color.next())
+    ax2.plot(Earr, dtAverage_E[:,i], linestyle='', marker=marker.next(), markersize=22, color=color.next())
 
 ax2.legend( [r"$B_{\mathrm{turb}}/B_0 = 1.00$", r"$B_{\mathrm{turb}}/B_0 = 0.50$", r"$B_{\mathrm{turb}}/B_0 = 0.25$",
              r"$B_{\mathrm{turb}}/B_0 = 0.10$", r"$B_{\mathrm{turb}}/B_0 = 0.01$"], 
-             fontsize='18', frameon=False)
+             fontsize='28', frameon=False)
 
 #ax2.set_title(r"Average runtime of the exact solution proportional to the average runtime of the GC-solution", 
 #                fontsize='18', y=1.03)
-ax2.set_xlabel(r"Energy [PeV]", fontsize='18')
-ax2.set_ylabel(r"t/$\mathrm{\tau}$", fontsize='18')
+ax2.set_xlabel(r"Energy [PeV]", fontsize='28')
+ax2.set_ylabel(r"t/$\mathrm{\tau}$", fontsize='28')
 
 
 ax.set_yscale("log")
@@ -113,5 +109,11 @@ ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
 
 ax2.set_xscale("log")
 ax2.xaxis.set_major_formatter(ticker.ScalarFormatter())
+
+fig1.set_size_inches(30, 22.5)
+fig1.savefig("Figures/Final/Average_dr_Rlarmor.png", bbox_inches='tight')
+
+fig2.set_size_inches(30, 22.5)
+fig2.savefig("Figures/Final/Average_runtime.png", bbox_inches='tight')
 
 plt.show()

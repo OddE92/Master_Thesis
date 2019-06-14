@@ -1,6 +1,8 @@
 #ifndef GCT_CONSTANTS
 #define GCT_CONSTANTS
 
+#include "Units/units.h"
+
 namespace GCT{
 
     constexpr double mtopc = 3.24078e-17;
@@ -8,9 +10,11 @@ namespace GCT{
 
     constexpr double qtoe = 6.2415091e18;
 
-    constexpr double mq = 1.1658e-11;                 //unit coefficient of m/e in the equation for B_effective
+    constexpr double mq = 1.1658e-11;               //unit coefficient of m/e in the equation for B_effective
 
-    constexpr double c = 2.99792458e8;              // Speed of light in m/s
+    constexpr double MeVtoKg = 1.7826619e-30;
+
+    const mps c(2.99792458e8);              // Speed of light in m/s
 
 
 }

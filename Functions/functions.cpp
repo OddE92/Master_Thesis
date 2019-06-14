@@ -32,84 +32,12 @@ int GCT::calculate_eigenvalues_3x3_sym(std::vector<double> &inVector, int startM
     return 0;
 }
 
-
-
-std::array<double, 3> GCT::calculate_vector_rotation(std::array<double, 3> b_before, std::array<double, 3> b_after, double &theta){
-    // Takes two vectors, returns the axis the rotation is about, as well as the angle of rotation theta
- 
-    GCT::normalize_vector(b_before); GCT::normalize_vector(b_after);        // Work with normalized vectors
-
-    double dot = GCT::vector_dot_product(b_before, b_after);
-    
-    if (dot - 1 > 0)        theta = 0;
-    else if (dot + 1 < 0)   theta = M_PI;
-    else                    theta = std::acos(dot);                         // Angle of rotation in the plane
- 
-    return GCT::vector_cross_product(b_before, b_after);                    // Normal vector to the plane of rotation
-}
-
-
-
-
-int GCT::normalize_vector(std::array<double, 3> &A){
-    double amp = GCT::vector_amplitude(A);
-    
-    if(amp == 0) return 1;
-
-    for(int i = 0; i < A.size(); i++){
-        A[i] = A[i]/amp;
-    }
-
-    return 0;
-}
-
-
-
-
-int GCT::rotate_vector_in_plane(std::array<double, 3> &vect, const std::array<double, 3> &axis, double theta){
-    
-    // Rotates the vector vect by an angle theta in the plane that has \hat{n} = axis
-    // axis should be normalized before being sent to this function (add GCT::normalize_vector(axis) to remove assumption).
-
-    double cost = std::cos(theta);
-    double cost1 = 1-cost;
-    double sint = std::sin(theta);
-
-    arma::vec v(3);
-    v[0] = vect[0]; v[1] = vect[1]; v[2] = vect[2];
-
-        // Rotation matrix for rotation in a plane, given the normal vector. Taken from wikipedia.
-    arma::mat R = {
-        {   cost + axis[0]*axis[0]*cost1,   axis[0]*axis[1]*cost1 - axis[2]*sint,   axis[0]*axis[2]*cost1 + axis[1]*sint    },
-        {   axis[1]*axis[0]*cost1 + axis[2]*sint,   cost + axis[1]*axis[1]*cost1,   axis[1]*axis[2]*cost1 - axis[0]*sint    },
-        {   axis[2]*axis[1]*cost1 - axis[1]*sint,   axis[2]*axis[1]*cost1 + axis[0]*sint,   cost + axis[2]*axis[2]*cost1    }
-    };
-
-    v = R*v;
-
-    vect = { v[0], v[1], v[2] };
-
-    return 0;
-}
-
-int GCT::scalar_dot_vector(double s, std::array<double, 3> &v){
-  for(int i = 0; i < v.size(); i++){
-    v[i] = s*v[i];
-  }
-    return 0;
-}
-std::array<double, 3> GCT::scalar_dot_vector_r(double s, const std::array<double, 3> &v){
-  std::array<double, 3> b;
-  for(int i = 0; i < v.size(); i++){
-    b[i] = s*v[i];
-  }
-    return b;
-}
-
-double GCT::frexp10(double arg, int * exp)                  // Gets the exponent of arg and stores it in exp
+template<class T>
+double GCT::frexp10(T arg, int * exp)                  // Gets the exponent of arg and stores it in exp
 {
-   *exp = (arg == 0) ? 0 : 1 + (int)std::floor(std::log10(std::fabs(arg) ) );
-   return arg * std::pow(10 , -(*exp));    
+   double argg = static_cast<double>(arg);
+   *exp = (argg == 0) ? 0 : 1 + (int)std::floor(std::log10(std::fabs(argg) ) );
+   return argg * std::pow(10 , -(*exp));    
 }
 
 
@@ -205,7 +133,7 @@ void GCT::print_Dij(std::vector<double> &inVector, int startMatrix){
 
 }
 
-double GCT::calculate_R_larmor(const double v_perp, const double E, const double B_amp){
+double GCT::calculate_R_larmor(const mps &v_perp, const eV &E, const microGauss &B_amp){
     return (1.0810076e-15 * (v_perp / GCT::c) * (E / B_amp) );
 }
 

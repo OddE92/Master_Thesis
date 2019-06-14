@@ -7,16 +7,22 @@
 #include "NR3/ran.h"
 #include "Constants/constants.h"
 
+#include "Units/units.h"
+
 #include <vector>
 #include <cmath>
 #include <array>
 
 class Particle{
     public:
-        std::array<double, 3> pos, v;
+        std::array<Parsec, 3>   pos;
+        std::array<mps, 3>      v;
 
         double E, q, m, gamma_l;
-        double v_total;
+        mps v_total, v_perp, v_parallell;
+        double p_para;
+
+        double gamma_l_NR;
 
         int initialize_new_particle(Ran &rng);
 

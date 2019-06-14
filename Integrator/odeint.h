@@ -170,10 +170,10 @@ void Odeint<Stepper>::integrate_GC(Trajectory &trajectory, const double x_max)  
     
  //std::cout << "y[0-2] at start: " << y[0] << ' ' << y[1] << ' ' << y[2] << std::endl;
 
-    //derivs.r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
-    //derivs.GC.GC_velocity = { y[3]*derivs.bfield.B_hat[0], y[3]*derivs.bfield.B_hat[1], y[3]*derivs.bfield.B_hat[2] };
+    derivs.r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
+    derivs.GC.GC_velocity = { y[3]*derivs.bfield.B_hat[0], y[3]*derivs.bfield.B_hat[1], y[3]*derivs.bfield.B_hat[2] };
       
-    //derivs.bfield.calculate_partial_b_hat(derivs.bfield.B, derivs.GC.GC_velocity, derivs.r, x, derivs.GC.timestep);
+    derivs.bfield.calculate_partial_b_hat(derivs.bfield.B, derivs.GC.GC_velocity, derivs.r, x, derivs.GC.timestep);
 
     derivs(x, y, dydx);                                     // First step
 
@@ -193,14 +193,23 @@ void Odeint<Stepper>::integrate_GC(Trajectory &trajectory, const double x_max)  
         }
      //std::cout << "\n\n/**********************************************************************************************/\n";
 
-      //derivs.r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
-      //derivs.GC.GC_velocity = { y[3]*derivs.bfield.B_hat[0], y[3]*derivs.bfield.B_hat[1], y[3]*derivs.bfield.B_hat[2] };
+      derivs.r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
+      derivs.GC.GC_velocity = { y[3]*derivs.bfield.B_hat[0], y[3]*derivs.bfield.B_hat[1], y[3]*derivs.bfield.B_hat[2] };
+      //derivs.GC.p_para = y[3];
+      derivs.bfield.calculate_partial_b_hat(derivs.bfield.B, derivs.GC.GC_velocity, derivs.r, x, derivs.GC.timestep);
       
-      //derivs.bfield.calculate_partial_b_hat(derivs.bfield.B, derivs.GC.GC_velocity, derivs.r, x, derivs.GC.timestep);
-
-      //derivs.bfield.calculate_E_effective(derivs.particle, derivs.GC.GC_velocity, derivs.GC.GC_position, derivs.GC.mu, derivs.GC.timestep, derivs.GC.dudt); 
+      //derivs.GC.p_para/(derivs.particle.m*derivs.particle.gamma_l*(1/GCT::MeVtoKg));
+      derivs.GC.v_parallell = GCT::vector_dot_product(derivs.GC.GC_velocity, derivs.bfield.B_hat);
+    std::cout << "B: " << derivs.bfield.B << std::endl;
+    std::cout << "v_total: " << derivs.particle.v_total << std::endl;
+    std::cout << "v_parallel: " << derivs.GC.v_parallell << std::endl;
+      derivs.GC.v_perp = std::sqrt(derivs.particle.v_total*derivs.particle.v_total - derivs.GC.v_parallell*derivs.GC.v_parallell);
+    std::cout << "v_perp: " << derivs.GC.v_perp << std::endl;
+      derivs.GC.mu = 0.5 * GCT::MeVtoKg *derivs.particle.m * std::pow(derivs.GC.v_perp, 2) / (1e-10 * GCT::vector_amplitude(derivs.bfield.B));
+    std::cout << "Mu: " <<  derivs.GC.mu << std::endl;
+      derivs.bfield.calculate_E_effective(derivs.particle, derivs.GC.GC_velocity, derivs.GC.GC_position, derivs.GC.mu, derivs.GC.timestep, derivs.GC.dudt); 
       
-      
+    std::cout << "E*: " << derivs.bfield.E_effective << std::endl;
       // Take a step
         s.step(h, derivs);
 
@@ -218,7 +227,7 @@ void Odeint<Stepper>::integrate_GC(Trajectory &trajectory, const double x_max)  
             file << y[0]*GCT::mtopc << ' ' << y[1]*GCT::mtopc << ' ' << y[2]*GCT::mtopc << ' ' << y[3] << ' ' << y[4] << std::endl;
             std::cout << "dydx: " << s.dydx[0] << ' ' << s.dydx[1] << ' ' << s.dydx[2] << ' ' << s.dydx[3] << ' ' 
                       << s.dydx[4] << std::endl;
-            std::cout << "GC.u: " << derivs.GC.u << std::endl;
+            std::cout << "GC.u: " << derivs.GC.u << std::en1111dl;
             std::cout << "\nB_hat_partial:\n " << derivs.bfield.B_hat_partial[0] << "\n " <<  derivs.bfield.B_hat_partial[1] << "\n " << derivs.bfield.B_hat_partial[2] << std::endl;
             std::cout << "B: " << derivs.bfield.B << std::endl;
             std::cout << "B*: " << derivs.bfield.B_effective << std::endl;
@@ -230,7 +239,7 @@ void Odeint<Stepper>::integrate_GC(Trajectory &trajectory, const double x_max)  
 
         derivs.GC.R_Larmor = 1.0810076e-15 * (derivs.GC.v_perp / GCT::c) * (derivs.particle.E / GCT::vector_amplitude(derivs.bfield.B));
         derivs.GC.GC_position = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
-        //std::cout << "derivs timestep: " << derivs.GC.timestep << std::endl;
+        std::cout << "derivs timestep: " << derivs.GC.timestep << std::endl;
         
 
         if(std::isnan(y[0])) return;                        // Break if the position goes to NaN
@@ -323,8 +332,8 @@ void Odeint<Stepper>::integrate(    std::vector<double> &D_ij, std::vector<doubl
     else
         out.save(x, y);
 
- std::cout << "odeint, x: " << x << std::endl;
- std::cout << "odeint, x_max: " << x_max << std::endl;
+ //std::cout << "odeint, x: " << x << std::endl;
+ //std::cout << "odeint, x_max: " << x_max << std::endl;
     for (nstp = 0; x <= x_max; nstp++)
     {
 

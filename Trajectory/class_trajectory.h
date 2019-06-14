@@ -76,7 +76,8 @@ struct Rhs_lorentz_equation{
 
             r = { y[0]*GCT::mtopc, y[1]*GCT::mtopc, y[2]*GCT::mtopc };
 
-            bfield.generate_bfield_at_point(t, B, r);            
+            bfield.generate_bfield_at_point(t, B, r); 
+            
      
         dydx[0] = y[3];                         // dydx[0] = vx
         dydx[1] = y[4];                         // dydx[1] = vy

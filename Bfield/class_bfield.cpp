@@ -4,7 +4,7 @@
 
 /********** GENERATE FIELD AT POINT **********/
 
-int Bfield::generate_bfield_at_point(double t, std::array<double, 3> &B_out, std::array<double, 3> &pos){
+int Bfield::generate_bfield_at_point(Seconds t, std::array<microGauss, 3> &B_out, std::array<Parsec, 3> &pos){
 
 /* 
     This functions takes the position and time, generates the turbulence (without reinitializing it) 
@@ -25,7 +25,7 @@ int Bfield::generate_bfield_at_point(double t, std::array<double, 3> &B_out, std
     B_out[1] = B_0 * B_static.y(t, pos) + turbAtPoint[1];
     B_out[2] = B_0 * B_static.z(t, pos) + turbAtPoint[2];
 
-    double B_amp = GCT::vector_amplitude(B_out);
+    microGauss B_amp = GCT::vector_amplitude(B_out);
 
     if(B_amp == 0){
         std::cout << "In generate_bfield_at_point: B_amp == 0.\n";
@@ -38,7 +38,7 @@ int Bfield::generate_bfield_at_point(double t, std::array<double, 3> &B_out, std
 }
 
 // overload to set bfield.B instead of a passed vector
-int Bfield::generate_bfield_at_point(double t, std::array<double, 3> &pos){
+int Bfield::generate_bfield_at_point(Seconds t, std::array<Parsec, 3> &pos){
 
 /* 
     This functions takes the position and time, generates the turbulence (without reinitializing it) 
@@ -59,7 +59,7 @@ int Bfield::generate_bfield_at_point(double t, std::array<double, 3> &pos){
     B[1] = B_0 * B_static.y(t, pos) + turbAtPoint[1];
     B[2] = B_0 * B_static.z(t, pos) + turbAtPoint[2];
 
-    double B_amp = GCT::vector_amplitude(B);
+    microGauss B_amp = GCT::vector_amplitude(B);
 
     if(B_amp == 0){
         std::cout << "In generate_bfield_at_point: B_amp == 0.\n";
@@ -73,7 +73,7 @@ int Bfield::generate_bfield_at_point(double t, std::array<double, 3> &pos){
 }
 /********** END GENERATE FIELD AT POINT **********/
 
-int Bfield::generate_turbulence_at_point(std::array<double, 3> &pos){
+int Bfield::generate_turbulence_at_point(std::array<Parsec, 3> &pos){
 
     // This function takes a position r, and generate a "random" turbulence to the B-field
 
@@ -127,22 +127,17 @@ int Bfield::generate_turbulence_at_point(std::array<double, 3> &pos){
 /**** END GENERATE TURBULENCE ***/
 
 /* CALCULATE PARTIAL DERIVATIVE */
-int Bfield::calculate_partial_b_hat(    std::array<double, 3> &B_at_point, std::array<double, 3> &GC_velocity, 
-                                        std::array<double, 3> &GC_position, double t, double timestep){
+int Bfield::calculate_partial_b_hat(    std::array<microGauss, 3> &B_at_point, std::array<mps, 3> &GC_velocity, 
+                                        std::array<Parsec, 3> &GC_position, Seconds t, Seconds timestep){
 
     // B_hat_partial[0][i] = d/di B__hat_x, [1][i] = d/di B__hat_y, [2][i] = d/di B__hat_z
-  //std::cout << "\nIn calc_b_partial: " << std::endl;  
-    std::array<double, 3> GC_next_position;                      // Holds GC_position after taking a step in x, y or z-direction
-    std::array<double, 3> B_at_next_point;
 
-    double step_size = GCT::vector_amplitude(GC_velocity) * timestep; 
-  //std::cout << "Step size: " << step_size << std::endl;
-  /*  
-    if(step_size < 1e-5){
-        std::cout << "Step size < 1e-10\n";
-        throw("Step size too small");
-    }
-  */
+    std::array<Parsec, 3> GC_next_position;                      // Holds GC_position after taking a step in x, y or z-direction
+    std::array<microGauss, 3> B_at_next_point;
+
+    Meter step_size = GCT::vector_amplitude(GC_velocity) * timestep; 
+  
+
  // i loops through dx, dy and dz
     for(int i = 0; i < GC_next_position.size(); i++){                       // Step through x, y, z as [0], [1], [2].
 
@@ -154,16 +149,16 @@ int Bfield::calculate_partial_b_hat(    std::array<double, 3> &B_at_point, std::
                 GC_next_position[j] = GC_position[j];                   
         
         } //End for j
-     //std::cout << "GC_pos: " << GC_position << std::endl;
-     //std::cout << "GC_next_pos: " << GC_next_position << std::endl;
+     
     
         generate_bfield_at_point(t, B_at_next_point, GC_next_position);     // Generate field at new position
-     //std::cout << "B_at_point: " << B_at_point << std::endl;
-     //std::cout << "B_at_next_p: " << B_at_next_point << std::endl;
-        double B_norm_p  = GCT::vector_amplitude(B_at_point);
-        double B_norm_np = GCT::vector_amplitude(B_at_next_point);
-     //std::cout << "B_norm_p: " << B_norm_p << std::endl;
-     //std::cout << "B_norm_nP: " << B_norm_np << std::endl;
+     
+      // This is needed in calc_E*, but we save it here to avoid having to generate the B-field 3 extra times.
+        Nabla_B[i] = units::mGtoT*(GCT::vector_amplitude(B_at_next_point) - GCT::vector_amplitude(B_at_point)) / step_size;
+
+        microGauss B_norm_p  = GCT::vector_amplitude(B_at_point);
+        microGauss B_norm_np = GCT::vector_amplitude(B_at_next_point);
+     
 
      // Calculate d/di(b_hat) = b_hat(r+dr) - b_hat(r) / (2*dr), with dr = dx, dy, dz for [0], [1], [2]. 
         for(int j = 0; j < B_at_next_point.size(); j++){
@@ -180,7 +175,7 @@ int Bfield::calculate_partial_b_hat(    std::array<double, 3> &B_at_point, std::
 
 /** CALCULATE EFFECTIVE FIELDS **/
 
-int Bfield::calculate_B_effective(std::array<double, 3> &GC_velocity, std::array<double, 3> &pos, double u, double m, double q){
+int Bfield::calculate_B_effective(std::array<mps, 3> &GC_velocity, std::array<Parsec, 3> &pos, mps u, MeVc2 m, e_charge q){
 
     // Calculates B* using the identity 
     // (Nabla cross scalar*vect) = scalar*(Nabla cross vect) + (Nabla*u) cross vect
@@ -197,7 +192,7 @@ int Bfield::calculate_B_effective(std::array<double, 3> &GC_velocity, std::array
     }
  //std::cout << "Nabla_u: " << nabla_u << std::endl;
 
-    std::array<double, 3> nabla_u_cross_b_hat = GCT::vector_cross_product(nabla_u, B_hat);
+    std::array<_ps, 3> nabla_u_cross_b_hat = GCT::vector_cross_product(nabla_u, B_hat);
  //std::cout << "Nabla_u_cross_b_hat: " << nabla_u_cross_b_hat << std::endl;
     std::array<double, 3> nabla_cross_b_hat = {
         B_hat_partial[1][2] - B_hat_partial[2][1],
@@ -219,37 +214,22 @@ int Bfield::calculate_B_effective(std::array<double, 3> &GC_velocity, std::array
     return 0;
 }
 
-int Bfield::calculate_E_effective(  Particle &particle, const std::array<double, 3> &GC_velocity, const std::array<double, 3> &GC_position,
-                                    const double mu, const double timestep, const double dudt){
+int Bfield::calculate_E_effective(  const Coulomb &q, const double mu){
 
     // Calculates E* using
-    // E* = -(m/2q)* (Nabla * v_perp^2)
-
-    //Possibly needs to be changed to 
     // E* = - (µ/q) * (Nabla * B),  with µ = (m * v_perp^2) / (2*B) := const
 
-    double step_size = GCT::vector_amplitude(GC_velocity) * timestep; 
-    
-    std::array<double, 3> GC_next_position, B_next;
+    // Possibly needs to be changed to 
+    // E* = -(m/2q)* (Nabla * v_perp^2)
+
+    // Nabla_B calculated in B_hat_partial for efficiency.
 
 
-    for(int i=0; i < 3; i++){
-
-        for (int j = 0; j < GC_next_position.size(); j++){          
-
-            if(i == j)
-                GC_next_position[j] = GC_position[j] + step_size*GCT::mtopc;           // Take a step in the i-direction only
-            else
-                GC_next_position[j] = GC_position[j];                   
-        
-        } //End for j
-
-        generate_bfield_at_point(0.0, B_next, GC_next_position);
-
-        E_effective[i] = - mu * (GCT::qtoe/particle.q) * (GCT::vector_amplitude(B_next) - GCT::vector_amplitude(B)) / step_size;
-        //E_effective[i] -= GCT::mq * (particle.m/particle.q) * dudt * B_hat[i];
-    }
-
+    E_effective = {
+            - (mu / q)  * Nabla_B[0],
+            - (mu / q)  * Nabla_B[1],
+            - (mu / q)  * Nabla_B[2]
+        };
 
     // testing <B> = const:
     //E_effective = { 0, 0, 0 };
@@ -257,29 +237,16 @@ int Bfield::calculate_E_effective(  Particle &particle, const std::array<double,
 }
 
 
-int Bfield::calculate_E_effective(  Particle &particle, double v_perp){
+int Bfield::calculate_E_effective(const Kg &m, const Coulomb &q, mps v_perp){
     
 
     // v_perp = v - v_parallel, v_parallel = v*\hat{b}      v is assumed const
-    // => Nabla * v_perp = - v * Nabla \hat{b}
- /*   std::vector<double> nabla_v_perp = {
-        - GCT::vector_dot_product(particle.v, B_hat_partial[0]),
-        - GCT::vector_dot_product(particle.v, B_hat_partial[1]),
-        - GCT::vector_dot_product(particle.v, B_hat_partial[2])
-    };
-
-    // E* = - (m/q) * v_perp * (Nabla * v_perp)             chain rule on Nabla * v_perp
-    E_effective = {
-        - GCT::mq * (particle.m / particle.q) * v_perp * nabla_v_perp[0],
-        - GCT::mq * (particle.m / particle.q) * v_perp * nabla_v_perp[1],
-        - GCT::mq * (particle.m / particle.q) * v_perp * nabla_v_perp[2]
-    };  
-  */
+    // => Nabla * v_perp = - v * Nabla \hat{b} = - v_part * nabla_u
 
     E_effective = {
-        GCT::mq * (particle.m / particle.q) * v_perp * nabla_u[0],
-        GCT::mq * (particle.m / particle.q) * v_perp * nabla_u[1],
-        GCT::mq * (particle.m / particle.q) * v_perp * nabla_u[2]
+        (m / q) * v_perp * nabla_u[0],
+        (m / q) * v_perp * nabla_u[1],
+        (m / q) * v_perp * nabla_u[2]
     };
 
     return 0;

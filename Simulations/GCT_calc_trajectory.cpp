@@ -15,8 +15,8 @@ constexpr int N_TEST_PARTICLES      =   100;
 constexpr int N_RANDOM_MODES        =   100;
 constexpr int T_RUN_FOR_YEARS       =   5e3;
 constexpr double B_REGULAR_COMP     =   10.0;                                         //microGauss
-constexpr double B_TURBULENT_COMP   =   (1/100.0)*B_REGULAR_COMP;                       //microGauss
-constexpr double E_TOTAL            =   1e17;                                        //eV
+constexpr double B_TURBULENT_COMP   =   (1/1.0)*B_REGULAR_COMP;                       //microGauss
+constexpr double E_TOTAL            =   1e07;                                        //eV
 constexpr double LAMBDA_MAX         =   150.0;                                        //pc
 constexpr double LAMBDA_MIN         =   0.027;                                       //pc    (0.27 = Rl/10 for B = 4, E = e16)
 constexpr double Q_CHARGE           =   1;                                           //# electron charges

@@ -36,6 +36,8 @@
 #include <cmath>
 #include <array>
 
+#include "Units/units.h"
+
 #include "Particle/class_particle.h"
 //#include "Guiding_center/class_guiding_center.h"
 
@@ -46,30 +48,40 @@
 struct Bfield_func{
     
  /***** Insert the B-field function component-wise in x, y and z *****/
+ /* Templated to accept both Parsec and Meter                        */
+ /* In B_rho the 10 can be changed to scale the strength of the MF.  */
+ /********************************************************************/
 
-     const double theta = 11.5* M_PI / 180.0;
-     double phi;
+    const double theta = 11.5* M_PI / 180.0;
+    double phi;
+    
+    template<class T>
+    double x(const Seconds t, const std::array<T, 3> &pos){
+       phi = std::atan2(pos[1], pos[0]);
+       return B_rho(pos)*(std::sin(theta) * std::cos(phi) - std::cos(theta) * std::sin(phi));
+       return 0;
+    }
 
-     double x(double t, std::array<double, 3> &pos){
-        phi = std::atan2(pos[1], pos[0]);
-        return (std::sin(theta) * std::cos(phi) - std::cos(theta) * std::sin(phi));
-        //return 0;
-     }
-     double y(double t, std::array<double, 3> &pos){
-        phi = std::atan2(pos[1], pos[0]);
-        return (std::sin(theta) * std::sin(phi) + std::cos(theta) * std::cos(phi));
-        //return 0;
-     }
-     double z(double t, std::array<double, 3> &pos){
-        return 0;
-     }
+    template<class T>
+    double y(const Seconds t, const std::array<T, 3> &pos){
+       phi = std::atan2(pos[1], pos[0]);
+       return B_rho(pos)*(std::sin(theta) * std::sin(phi) + std::cos(theta) * std::cos(phi));
+       return 0;
+    }
 
-     double B_rho(std::array<double, 3> &pos){
-          return 100.0/std::sqrt( std::sqrt(pos[0]*pos[0]+pos[1]*pos[1]+pos[2]*pos[2]) );
-     }
-     double B_rho_phi(std::array<double, 3> &pos){
-          return B_rho(pos)*std::cos(std::atan2(pos[1], pos[0]) - std::log(std::sqrt(pos[0]*pos[0]+pos[1]*pos[1]+pos[2]*pos[2])/100.0));
-     }
+    template<class T>
+    double z(const Seconds t, std::array<T, 3> &pos){
+       return 0;
+    }
+
+    template<class T>
+    double B_rho(const std::array<T, 3> &pos){
+         return 10.0/std::sqrt( std::sqrt(pos[0]*pos[0]+pos[1]*pos[1]+pos[2]*pos[2]) );
+    }
+    template<class T>
+    double B_rho_phi(const std::array<T, 3> &pos){
+         return B_rho(pos)*std::cos(std::atan2(pos[1], pos[0]) - std::log(std::sqrt(pos[0]*pos[0]+pos[1]*pos[1]+pos[2]*pos[2])/100.0));
+    }
 };
 
 
@@ -78,31 +90,31 @@ struct Bfield_func{
 
 class Bfield{
    public:
-      //std::array<double, 3> turbAtPoint, B, B_effective, E_effective;
-      std::array<double, 3> turbAtPoint, B, B_hat;
-      std::array<double, 3> B_effective, E_effective;
+      std::array<microGauss, 3> turbAtPoint, B;
+      std::array<microGauss, 3> B_effective, E_effective;
+      std::array<double, 3> B_hat, Nabla_B;
       std::array<std::array<double, 3>, 3> B_hat_partial;
 
-      std::array<double, 3> nabla_u;
+      std::array<_ps, 3> nabla_u;
 
       bool gen_turb = false;
 
       //Functions for generating the B-field
-      int generate_bfield_at_point(double t, std::array<double, 3> &B_out, std::array<double, 3> &pos);
-      int generate_bfield_at_point(double t, std::array<double, 3> &pos);
+      int generate_bfield_at_point(Seconds t, std::array<microGauss, 3> &B_out, std::array<Parsec, 3> &pos);
+      int generate_bfield_at_point(Seconds t, std::array<Parsec, 3> &pos);
 
-      int calculate_B_effective(std::array<double, 3> &GC_velocity, std::array<double, 3> &pos, double u, double m, double q);
+      int calculate_B_effective(std::array<mps, 3> &GC_velocity, std::array<Parsec, 3> &pos, mps u, MeVc2 m, e_charge q);
 
-      int calculate_E_effective(   Particle &particle, const std::array<double, 3> &GC_velocity, const std::array<double, 3> &GC_position,
-                                   const double mu, const double timestep, const double dudt);
-      int calculate_E_effective(   Particle &particle, double v_perp);
+      int calculate_E_effective(const Coulomb &q, const double mu);
+      int calculate_E_effective(const Kg &m, const Coulomb &q, mps v_perp);
 
-      int calculate_partial_b_hat(      std::array<double, 3> &B_at_point, std::array<double, 3> &GC_velocity,
-                                        std::array<double, 3> &GC_position, double t, double timestep);
+      int calculate_partial_b_hat(      std::array<microGauss, 3> &B_at_point, std::array<mps, 3> &GC_velocity,
+                                        std::array<Parsec, 3> &GC_position, Seconds t, Seconds timestep);
+      
 
 
       //General functions
-      int generate_turbulence_at_point(std::array<double, 3> &pos);
+      int generate_turbulence_at_point(std::array<Parsec, 3> &pos);
       int initialize_turbulence(Ran &ran);
       int reinitialize_turbulence(Ran &ran);
 
@@ -119,11 +131,11 @@ class Bfield{
 
       //Magnetic field
       int n_k = 50;                       // Nr. of modes used to generate the turbulence
-      double B_0 = 1.0;                   // Static magnetic field RMS
-      double B_rms_turb = 1.0;            // Normalized magnetic field,
+      microGauss B_0 = 1.0;                   // Static magnetic field RMS
+      microGauss B_rms_turb = 1.0;            // Normalized magnetic field,
       const double gamma = 5.0 / 3.0;     // Power law for the fluctuation spectrum
-      double lambda_min = 0.2;            // Smallest wavelength, in parsecs
-      double lambda_max = 10.0;           // Largest wavelength, in parsecs
+      Parsec lambda_min = 0.2;            // Smallest wavelength, in parsecs
+      Parsec lambda_max = 10.0;           // Largest wavelength, in parsecs
       double k_min = two_pi / lambda_max; // Smallest wavenumber
       double k_max = two_pi / lambda_min; // Largest wavenumber
 

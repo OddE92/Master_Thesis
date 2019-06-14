@@ -2,6 +2,7 @@
 #define INITIALIZER
 
 #include <vector>
+#include "Units/units.h"
 
 /******* INITIALIZING LIST ******/
 struct Initializer{
@@ -21,8 +22,8 @@ struct Initializer{
     bool generate_turbulence;
 
    // Particle
-    std::vector<double> start_pos;
-    std::vector<double> start_vel;
+    std::vector<Parsec> start_pos;
+    std::vector<mps> start_vel;
     double E, q, m;
     
    // RNG

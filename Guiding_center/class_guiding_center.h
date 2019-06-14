@@ -5,26 +5,28 @@
 #include "Particle/class_particle.h"
 #include "Bfield/class_bfield.h"
 
+#include "Units/units.h"
+
 class Guiding_Center{
     public:
-        std::array<double, 3> GC_velocity, GC_position;
-        std::array<double, 3> a_hat, hat_1;
-        std::array<double, 3> v_perp_hat;
+        std::array<Parsec, 3>   GC_position;
+        std::array<mps, 3>      GC_velocity;
+        std::array<double, 3>   v_perp_hat, a_hat;
 
         double gyrofrequency;
         double gyrophase;
-        double u;
+        mps u;
         double mu;
-        double v_perp, v_parallell;
-        double R_Larmor;
-        double timestep;
-        double dudt;
+    
+        Parsec R_Larmor;
+        Seconds timestep;
+        _ps dudt;
 
         // Functions
-        int initialize_new_GC(Particle &particle, Bfield &bfield, Ran &rng, double t);
+        int initialize_new_GC(Particle &particle, Bfield &bfield, Ran &rng, Seconds t);
 
-        double calculate_v_parallell(const std::array<double, 3> &particle_velocity, const std::array<double, 3> &B_hat);
-        double calculate_v_perp(const std::array<double, 3> &particle_velocity, const double v_parallell);
+        double calculate_v_parallell(const std::array<mps, 3> &particle_velocity, const std::array<double, 3> &B_hat);
+        double calculate_v_perp(const std::array<mps, 3> &particle_velocity, mps v_parallell);
 
 
         Guiding_Center(){};

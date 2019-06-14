@@ -1,6 +1,8 @@
 #ifndef FREE_FUNCTIONS
 #define FREE_FUNCTIONS
 
+#include "Functions/functions.inl"
+
 #include "Bfield/class_bfield.h"
 #include "Particle/class_particle.h"
 #include "Initializer/initializer.h"
@@ -18,30 +20,37 @@ int calculate_eigenvalues_3x3_sym(std::vector<double> &inVector, int startMatrix
 
 double frexp10(double arg_in, int * exponent_out);        // takes a double and stores the exponent in exponent_out
 
-double calculate_R_larmor(const double v_perp, const double E, const double B_amp);
+double calculate_R_larmor(const mps &v_perp, const eV &E, const microGauss &B_amp);
 
 /********** INLINED VECTOR FUNCTIONS **********/
 
-
-inline double vector_amplitude(const std::array<double, 3> &vect){
+template<class T>
+double vector_amplitude(const std::array<T, 3> &vect){
   return(std::sqrt(vect[0]*vect[0] + vect[1]*vect[1] + vect[2]*vect[2]));
 }
 
-inline std::array<double, 3> vector_cross_product(const std::array<double, 3> &A, const std::array<double, 3> &B){
+template<class T, class L>
+std::array<T, 3> vector_cross_product(const std::array<T, 3> &A, const std::array<L, 3> &B){
   return { A[1]*B[2] - A[2]*B[1], A[2]*B[0] - A[0]*B[2], A[0]*B[1] - A[1]*B[0] };
 }
 
-inline double vector_dot_product(const std::array<double, 3> &A, const std::array<double, 3> &B){
+
+template<class T, class L>
+double vector_dot_product(const std::array<T, 3> &A, const std::array<L, 3> &B){
   return (A[0]*B[0] + A[1]*B[1] + A[2]*B[2]);
 }
 
 
 /***********************************************/
 
-int scalar_dot_vector(double s, std::array<double, 3> &v);
-std::array<double, 3> scalar_dot_vector_r(double s, const std::array<double, 3> &v);
+template<class T, class L>
+int scalar_dot_vector(T s, std::array<L, 3> &v);
 
+template<class T, class L>
+std::array<T, 3> scalar_dot_vector_r(L s, const std::array<T, 3> &v);
 
+template<class T>
+int normalize_vector(std::array<T, 3> &A);
 
     // Filename generators
 std::string generate_unique_filename_positions(Bfield &bfield, Particle &particle, int procID);
@@ -51,13 +60,6 @@ std::string generate_unique_filename_compare(double E, int B_0, int procID);
 
     // Directory generator
 int create_directory_to_file(std::string filename);
-
-
-    // Vector functions
-
-std::array<double, 3> calculate_vector_rotation(std::array<double, 3> b_before, std::array<double, 3> b_after, double &theta);
-int rotate_vector_in_plane(std::array<double, 3> &vector, const std::array<double, 3> &axis, double theta);
-int normalize_vector(std::array<double, 3> &A);
 
 
     // For printing diffusion tensor while debugging

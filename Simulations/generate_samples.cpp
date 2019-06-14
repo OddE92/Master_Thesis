@@ -13,13 +13,13 @@
 #include <cmath>
 
 constexpr int N_TEST_PARTICLES      =   100;
-constexpr int N_RANDOM_MODES        =   50;
-constexpr int T_RUN_FOR_YEARS       =   1e5;
+constexpr int N_RANDOM_MODES        =   200;
+constexpr int T_RUN_FOR_YEARS       =   1e7;
 constexpr double B_REGULAR_COMP     =   0.0;                                         //microGauss
 constexpr double B_TURBULENT_COMP   =   4.0;                                         //microGauss
 constexpr double E_TOTAL            =   1e18;                                        //eV
 constexpr double LAMBDA_MAX         =   150.0;                                        //pc
-constexpr double LAMBDA_MIN         =   0.027;                                       //pc    (0.27 = Rl/10 for B = 4, E = e16)
+constexpr double LAMBDA_MIN         =   0.00027;                                     //pc    (0.00027 = Rl/10 for B = 4, E = e13)
 constexpr double Q_CHARGE           =   1;                                           //# electron charges
 constexpr double M_MASS             =   938.2720813;                                 //MeV/c^2
 constexpr double ERROR_MAX          =   1.0e-05;                                     
@@ -114,13 +114,13 @@ int main(int argc, char* argv[])
 
     for(int i = 0; i < init.N; i++){                                    //i < number of particles to test
 
-      std::cout << "When do I get here?\n";
+      //std::cout << "When do I get here?\n";
       particle.initialize_new_particle(rng);
-      std::cout << "What about here?\n";
+      //std::cout << "What about here?\n";
 
       trajectory.Propagate_particle(particle, bfield);
 
-      std::cout << "I did a particle\n";
+      //std::cout << "I did a particle\n";
 
       //Print progress in %
       if( static_cast<double>(i+1)/init.N - percentCounter > __DBL_EPSILON__ ){
